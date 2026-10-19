@@ -59,6 +59,20 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .race-empty{padding:15px;border-radius:12px;background:#17181d;color:#c2c2c8;font-size:13px}
 .race-loading{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:7px}
 @media(max-width:600px){.race-actions{align-items:flex-start}.race-data .eyebrow{font-size:10px}}
+
+.race-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}
+.race-actions button{border:1px solid var(--line);border-radius:999px;padding:10px 14px;color:var(--gold-light);background:#1a1916;font:inherit;font-size:12px;font-weight:750;cursor:pointer}
+.race-actions button:disabled{opacity:.55;cursor:wait}
+.race-meta{color:var(--muted);font-size:12px;margin:8px 0}
+.race-course{border:1px solid #343239;border-radius:12px;background:#14151a;padding:14px;margin:12px 0}
+.race-course h3{font-size:17px;margin:0 0 8px;color:var(--gold-light)}
+.race-table-wrap{overflow-x:auto;max-width:100%;border-radius:8px}
+.race-table-wrap table{width:100%;border-collapse:collapse;min-width:480px;font-size:12px}
+.race-table-wrap th,.race-table-wrap td{padding:9px 10px;text-align:left;border-bottom:1px solid #303037;vertical-align:top}
+.race-table-wrap th{color:var(--gold-light);font-weight:800;background:#1e1d20}
+.race-table-wrap td{color:#dedde2}
+.race-table-wrap td strong{color:#fff}
+
 </style>
 </head>
 <body>
@@ -113,38 +127,44 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     window.setTimeout(function(){player.src=streamUrl;reload.disabled=false;},120);
   });
 
-  const raceApi='https://el-banko-race-data.onrender.com/api/races';
+  const raceApi='https://el-banko-race-api.onrender.com/api/races';
   const raceStatus=document.getElementById('race-status');
   const raceResults=document.getElementById('race-results');
   const raceUpdated=document.getElementById('race-updated');
   const refreshRaces=document.getElementById('refresh-races');
   function safeText(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+  function renderRaceData(data){
+    const courses=Array.isArray(data.courses)?data.courses:[];
+    if(!courses.length) throw new Error('Kaynakta görüntülenecek yarış programı bulunamadı.');
+    let total=0;
+    const cards=courses.map(course=>{
+      const races=Array.isArray(course.races)?course.races:[];
+      const horses=Array.isArray(course.horses)?course.horses:[];
+      total+=horses.length;
+      const raceList=races.length?'<div class="race-meta">Koşular: '+races.map(r=>safeText(r.number)+'. koşu · '+safeText(r.time)).join(' &nbsp; · &nbsp; ')+'</div>':'';
+      const horseTable=horses.length?'<div class="race-table-wrap"><table><thead><tr><th>No</th><th>At</th><th>Program bilgileri</th></tr></thead><tbody>'+horses.map(h=>'<tr><td>'+safeText(h.number||'—')+'</td><td><strong>'+safeText(h.name)+'</strong></td><td>'+safeText((h.details||[]).slice(2,10).filter(Boolean).join(' · '))+'</td></tr>').join('')+'</tbody></table></div>':'<div class="race-empty">Bu hipodromun at listesi otomatik okunamadı.</div>';
+      return '<article class="race-course"><h3>'+safeText(course.course)+'</h3>'+raceList+horseTable+'</article>';
+    }).join('');
+    raceResults.className='race-results';
+    raceResults.innerHTML='<div class="race-meta">'+safeText(data.source)+' · '+safeText(data.notice||'')+'</div>'+cards;
+    raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri durumu:</b> Resmî TJK programı alındı. '+courses.length+' hipodrom · '+total+' at kaydı.</span>';
+    raceUpdated.textContent='Son güncelleme: '+new Date(data.fetchedAt).toLocaleString('tr-TR');
+  }
   async function loadRaces(){
     refreshRaces.disabled=true;
     raceStatus.innerHTML='<span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Resmî günlük yarış verisi isteniyor…</span>';
     raceResults.className='race-empty';
-    raceResults.innerHTML='<span class="race-loading"></span>Veri kaynağı kontrol ediliyor…';
+    raceResults.innerHTML='<span class="race-loading"></span>Günlük program kontrol ediliyor…';
     try{
       const response=await fetch(raceApi,{headers:{'Accept':'application/json'},cache:'no-store'});
       const data=await response.json();
       if(!response.ok) throw new Error(data.error||'Yarış verisi alınamadı.');
-      const rows=Array.isArray(data.rows)?data.rows:[];
-      raceUpdated.textContent='Son kontrol: '+new Date(data.fetchedAt).toLocaleString('tr-TR');
-      if(rows.length){
-        const head=rows[0];
-        const body=rows.slice(1).map(row=>'<tr>'+row.map(cell=>'<td>'+safeText(cell)+'</td>').join('')+'</tr>').join('');
-        raceResults.className='race-results';
-        raceResults.innerHTML='<table><thead><tr>'+head.map(cell=>'<th>'+safeText(cell)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table>';
-        raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri kaynağı:</b> '+safeText(data.source)+' · program sayfasından '+rows.length+' tablo satırı alındı. Sonuçlar bilgi amaçlıdır.</span>';
-      }else{
-        raceResults.className='race-empty';
-        raceResults.textContent=data.notice||'Kaynak açıldı ancak program tablosu tanınan biçimde alınamadı.';
-        raceStatus.innerHTML='<span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Kaynağa ulaşıldı, fakat yarış tablosu otomatik okunamadı. Veri uydurulmadı.</span>';
-      }
+      renderRaceData(data);
     }catch(error){
       raceResults.className='race-empty';
-      raceResults.textContent='Günlük yarış verisi şu anda alınamadı. Biraz sonra “Yarış verisini yenile” düğmesine basın.';
-      raceStatus.innerHTML='<span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Canlı kaynak bağlantısı şu anda yanıt vermiyor. Otomatik veri gelmeden program bilgisi gösterilmeyecek.</span>';
+      raceResults.textContent='Günlük yarış verisi şu anda alınamadı. Lütfen biraz sonra yeniden deneyin.';
+      raceStatus.innerHTML='<span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Sunucu veya resmî veri kaynağı yanıt vermedi. Gerçek veri gelmeden program bilgisi gösterilmiyor.</span>';
+      raceUpdated.textContent='Son kontrol: '+new Date().toLocaleString('tr-TR');
     }finally{refreshRaces.disabled=false;}
   }
   refreshRaces.addEventListener('click',loadRaces);
