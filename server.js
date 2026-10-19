@@ -82,10 +82,48 @@ async function getDailyRaces(){
   if(!courses.length) throw new Error("TJK sayfası ulaşıldı ancak yarış tablosu ayrıştırılamadı.");
   return {source:"Türkiye Jokey Kulübü (TJK)",fetchedAt:new Date().toISOString(),courses,notice:"Resmî programdan alınan veriler bilgilendirme ve performans karşılaştırması içindir. Yarış sonuçları garanti edilemez."};
 }
+const adminSessions=new Map();
+function safeEqual(a,b){
+  const aa=Buffer.from(String(a||""));const bb=Buffer.from(String(b||""));
+  return aa.length===bb.length && aa.length>0 && crypto.timingSafeEqual(aa,bb);
+}
+function adminAuthorized(req){
+  const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"");
+  const expiry=adminSessions.get(token);
+  if(!token||!expiry||expiry<Date.now()){adminSessions.delete(token);return false;}
+  return true;
+}
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS"){res.writeHead(204,{"Access-Control-Allow-Origin":SITE_ORIGIN,"Access-Control-Allow-Methods":"GET, OPTIONS"});return res.end();}
   const url=new URL(req.url,"http://localhost");
   if(url.pathname==="/health") return send(res,200,{ok:true,service:"EL BANKO race data",membersDatabase:dbReady?"connected":"not_configured",time:new Date().toISOString()});
+  if(url.pathname==="/api/admin/login" && req.method==="POST"){
+    if(!process.env.ADMIN_PASSWORD)return send(res,503,{error:"Yönetici şifresi sunucuda ayarlanmamış."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    if(!safeEqual(b.password,process.env.ADMIN_PASSWORD))return send(res,401,{error:"Yönetici şifresi hatalı."});
+    const token=crypto.randomBytes(32).toString("hex");
+    adminSessions.set(token,Date.now()+8*60*60*1000);
+    return send(res,200,{ok:true,token,expiresIn:28800});
+  }
+  if(url.pathname==="/api/admin/logout" && req.method==="POST"){
+    const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"");
+    adminSessions.delete(token);return send(res,200,{ok:true});
+  }
+  if(url.pathname==="/api/admin/members" && req.method==="GET"){
+    if(!adminAuthorized(req))return send(res,401,{error:"Yönetici oturumu geçersiz veya süresi dolmuş."});
+    if(!db||!dbReady)return send(res,503,{error:"Üyelik veri tabanı bağlı değil."});
+    try{const r=await db.query("SELECT id,full_name,username,email,phone,status,created_at FROM members ORDER BY created_at DESC LIMIT 500");return send(res,200,{members:r.rows});}
+    catch(e){console.error("Admin member list failed",e.message);return send(res,500,{error:"Üye listesi alınamadı."});}
+  }
+  if(url.pathname.startsWith("/api/admin/members/") && url.pathname.endsWith("/status") && req.method==="POST"){
+    if(!adminAuthorized(req))return send(res,401,{error:"Yönetici oturumu geçersiz veya süresi dolmuş."});
+    if(!db||!dbReady)return send(res,503,{error:"Üyelik veri tabanı bağlı değil."});
+    const id=url.pathname.split("/")[4];if(!/^\\d+$/.test(id))return send(res,400,{error:"Üye numarası geçersiz."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    if(!["pending","approved","rejected","suspended"].includes(b.status))return send(res,400,{error:"Durum seçimi geçersiz."});
+    try{const r=await db.query("UPDATE members SET status=$1 WHERE id=$2 RETURNING id,full_name,username,email,status,created_at",[b.status,id]);if(!r.rowCount)return send(res,404,{error:"Üye bulunamadı."});return send(res,200,{ok:true,member:r.rows[0]});}
+    catch(e){console.error("Admin member update failed",e.message);return send(res,500,{error:"Üye durumu güncellenemedi."});}
+  }
   if(url.pathname==="/api/members" && req.method==="POST"){
     if(!db || !dbReady)return send(res,503,{error:"Üyelik veri tabanı henüz bağlanmadı."});
     if(req.headers.origin && req.headers.origin!==SITE_ORIGIN)return send(res,403,{error:"İstek kaynağı kabul edilmedi."});
