@@ -73,6 +73,25 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .race-table-wrap td{color:#dedde2}
 .race-table-wrap td strong{color:#fff}
 
+
+/* Mobile-friendly EL BANKO in-site support chat */
+#eb-chat-launch{position:fixed;right:16px;bottom:16px;z-index:9998;border:1px solid #f4df9a;border-radius:999px;padding:13px 17px;background:linear-gradient(135deg,#f4df9a,#c99b36);color:#171208;font-weight:850;box-shadow:0 8px 28px #0009;cursor:pointer}
+#eb-chat-panel{position:fixed;right:12px;bottom:78px;z-index:9999;width:min(370px,calc(100vw - 24px));height:min(520px,calc(100dvh - 110px));display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(217,180,91,.55);border-radius:18px;background:#101115;box-shadow:0 18px 60px #000b}
+#eb-chat-panel.eb-open{display:flex}
+.eb-chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;background:linear-gradient(120deg,#292215,#111216);border-bottom:1px solid rgba(217,180,91,.35)}
+.eb-chat-head strong{display:block;color:#f4df9a;font-size:16px}.eb-chat-head small{color:#b8b6bd}
+#eb-chat-close{border:1px solid #4a4537;border-radius:9px;background:#17181d;color:#fff;font-size:20px;width:36px;height:36px;cursor:pointer}
+#eb-chat-log{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.eb-chat-msg{max-width:88%;padding:10px 12px;border-radius:13px;background:#202127;color:#f3f1ec;overflow-wrap:anywhere;font-size:14px}
+.eb-chat-msg.eb-user{align-self:flex-end;background:#4a3a18;color:#fff2c9}
+.eb-chat-msg small{display:block;color:#aaa7a0;font-size:10px;margin-top:4px}
+.eb-chat-compose{padding:12px;border-top:1px solid #333037;display:grid;gap:8px}
+.eb-chat-compose input,.eb-chat-compose textarea{width:100%;min-width:0;border:1px solid #393840;border-radius:10px;padding:11px;background:#090a0d;color:#fff;font:inherit;font-size:14px}
+.eb-chat-compose textarea{resize:vertical;min-height:62px;max-height:100px}
+#eb-chat-send{border:0;border-radius:10px;padding:12px;background:linear-gradient(135deg,#f4df9a,#c99b36);color:#171208;font-weight:850;cursor:pointer}
+.eb-chat-notice{padding:0 12px 10px;color:#aaa7a0;font-size:11px}
+@media(max-width:480px){#eb-chat-launch{right:12px;bottom:12px;padding:12px 15px}#eb-chat-panel{right:8px;bottom:70px;width:calc(100vw - 16px);height:min(540px,calc(100dvh - 90px))}}
+
 </style>
 </head>
 <body>
@@ -171,5 +190,42 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   loadRaces();
 })();
 </script>
+
+<button id="eb-chat-launch" type="button" aria-controls="eb-chat-panel" aria-expanded="false">💬 Müşteri Sohbeti</button>
+<section id="eb-chat-panel" role="dialog" aria-label="EL BANKO site içi sohbet" aria-modal="false">
+  <header class="eb-chat-head"><div><strong>EL BANKO Destek</strong><small>Site içi sohbet</small></div><button id="eb-chat-close" type="button" aria-label="Sohbeti kapat">×</button></header>
+  <div id="eb-chat-log" aria-live="polite"><div class="eb-chat-msg">Merhaba! EL BANKO destek ekranına hoş geldiniz. Size nasıl yardımcı olabiliriz?<small>EL BANKO</small></div></div>
+  <form class="eb-chat-compose" id="eb-chat-form">
+    <input id="eb-chat-name" name="name" maxlength="60" autocomplete="name" placeholder="Adınız (isteğe bağlı)" aria-label="Adınız">
+    <textarea id="eb-chat-message" name="message" maxlength="1000" placeholder="Mesajınızı yazın..." aria-label="Mesajınız" required></textarea>
+    <button id="eb-chat-send" type="submit">Mesajı Göster</button>
+  </form>
+  <div class="eb-chat-notice">Bu sohbet arayüzü şu an önizleme modunda. Mesajlar destek ekibine iletilmez.</div>
+</section>
+<script>
+(function(){
+ const launch=document.getElementById('eb-chat-launch');
+ const panel=document.getElementById('eb-chat-panel');
+ const close=document.getElementById('eb-chat-close');
+ const form=document.getElementById('eb-chat-form');
+ const log=document.getElementById('eb-chat-log');
+ const message=document.getElementById('eb-chat-message');
+ const name=document.getElementById('eb-chat-name');
+ if(!launch||!panel||!form||!log)return;
+ function toggle(open){panel.classList.toggle('eb-open',open);launch.setAttribute('aria-expanded',String(open));if(open)message.focus();}
+ launch.addEventListener('click',()=>toggle(!panel.classList.contains('eb-open')));
+ close.addEventListener('click',()=>toggle(false));
+ form.addEventListener('submit',function(event){
+   event.preventDefault();
+   const value=message.value.trim();
+   if(!value)return;
+   const bubble=document.createElement('div');bubble.className='eb-chat-msg eb-user';
+   bubble.appendChild(document.createTextNode((name.value.trim()?name.value.trim()+': ':'')+value));
+   const stamp=document.createElement('small');stamp.textContent='Bu cihazdaki önizleme';bubble.appendChild(stamp);
+   log.appendChild(bubble);message.value='';log.scrollTop=log.scrollHeight;
+ });
+})();
+</script>
+
 </body>
 </html>
