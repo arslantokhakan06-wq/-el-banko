@@ -2,32 +2,74 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#08090b">
-<title>EL BANKO | Canlı Yarış Yayını</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090a0c">
+<meta name="description" content="EL BANKO içinde TAY TV canlı yarış yayınını izleyin.">
+<title>EL BANKO | TAY TV Canlı Yarış</title>
 <style>
-:root{--gold:#d9b45b;--line:#393124}
+:root{color-scheme:dark;--gold:#d9b45b;--gold-light:#f4df9a;--muted:#a9a9b1;--panel:#111216;--line:rgba(217,180,91,.3)}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#39301b 0,#111114 36%,#08090b 75%);color:#f8f5ed;font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.wrap{max-width:1100px;margin:auto;padding:20px}
-header{display:flex;align-items:center;justify-content:center;padding:18px 0 22px;border-bottom:1px solid #292a30}
-.logo{font-weight:950;letter-spacing:4px;font-size:28px}.logo span{color:var(--gold)}
-h1{text-align:center;font-size:clamp(25px,5vw,40px);margin:26px 0 8px}
-.sub{text-align:center;color:#a7abb5;margin:0 0 22px}
-.player{width:100%;aspect-ratio:16/9;min-height:240px;background:#000;border:1px solid #514326;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px #0008}
-.player iframe{display:block;width:100%;height:100%;border:0}
-.note{text-align:center;color:#a7abb5;font-size:12px;margin:14px auto 0;max-width:720px}
-footer{text-align:center;color:#777b84;font-size:12px;padding:24px 0 8px}
-@media(max-width:600px){.wrap{padding:12px}.player{min-height:210px}}
+html{min-height:100%;background:#090a0c}
+body{margin:0;min-height:100vh;color:#f7f5ef;font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 50% -18%,rgba(122,91,30,.28),transparent 48%),#090a0c}
+.page{width:min(1180px,100%);margin:0 auto;padding:clamp(14px,3vw,30px)}
+.top{display:flex;align-items:center;justify-content:center;padding:12px 0 22px;border-bottom:1px solid rgba(255,255,255,.09)}
+.brand{font-size:clamp(25px,4vw,34px);font-weight:950;letter-spacing:.17em;line-height:1}
+.brand span{color:var(--gold)}
+main{padding:clamp(22px,4vw,42px) 0 0}
+.eyebrow{display:flex;justify-content:center;align-items:center;gap:9px;color:var(--gold-light);font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+.dot{width:8px;height:8px;border-radius:50%;background:#d6ad4e;box-shadow:0 0 12px #d6ad4e88}
+h1{text-align:center;font-size:clamp(25px,5vw,44px);line-height:1.12;letter-spacing:-.035em;margin:14px 0 9px}
+.intro{text-align:center;color:var(--muted);margin:0 auto 26px;max-width:620px;font-size:14px}
+.player-shell{padding:clamp(5px,1vw,9px);border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(217,180,91,.12),rgba(255,255,255,.015) 38%,rgba(217,180,91,.05));box-shadow:0 22px 70px #0008}
+.player{position:relative;aspect-ratio:16/9;min-height:230px;overflow:hidden;border-radius:12px;background:#000}
+iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:15px 4px 4px}
+.channel{display:flex;align-items:center;gap:10px;min-width:0}
+.channel-mark{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border:1px solid var(--line);border-radius:10px;color:var(--gold);font-size:12px;font-weight:900}
+.channel-title{font-weight:750;font-size:14px}
+.channel-sub{color:var(--muted);font-size:12px}
+button{appearance:none;border:1px solid rgba(217,180,91,.55);border-radius:999px;background:#1a1710;color:var(--gold-light);padding:10px 16px;font:700 13px system-ui,-apple-system,sans-serif;cursor:pointer}
+button:hover{background:#282113}
+button:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px}
+.help{margin:17px auto 0;text-align:center;max-width:740px;color:#8e9098;font-size:12px}
+footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-spacing:.08em}
+@media(max-width:560px){.page{padding:12px}.top{padding:12px 0 18px}main{padding-top:25px}.intro{margin-bottom:19px}.player{aspect-ratio:16/10;min-height:205px}.controls{align-items:flex-start}.controls button{padding:9px 12px}}
 </style>
 </head>
-<body><main class="wrap">
-<header><div class="logo">EL <span>BANKO</span></div></header>
+<body>
+<div class="page">
+<header class="top"><div class="brand" aria-label="EL BANKO">EL <span>BANKO</span></div></header>
+<main>
+<div class="eyebrow"><span class="dot" aria-hidden="true"></span> TAY TV · CANLI YAYIN</div>
 <h1>Canlı Yarış Yayını</h1>
-<p class="sub">TAY TV</p>
-<section class="player" aria-label="TAY TV canlı yayın oynatıcısı">
-<iframe src="https://www.youtube-nocookie.com/embed/live_stream?channel=UCjkRA7KEdp7PDKDUs396XHg&autoplay=1" title="TAY TV canlı yarış yayını" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<p class="intro">Yarış yayınını bu sayfadan izleyin.</p>
+<section class="player-shell" aria-label="TAY TV canlı yayın alanı">
+<div class="player">
+<iframe id="live-player" src="https://www.youtube-nocookie.com/embed/live_stream?channel=UCjkRA7KEdp7PDKDUs396XHg&autoplay=0" title="TAY TV canlı yarış yayını" allow="encrypted-media; fullscreen; picture-in-picture; autoplay" allowfullscreen loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+</div>
+<div class="controls">
+<div class="channel">
+<div class="channel-mark" aria-hidden="true">TV</div>
+<div><div class="channel-title">TAY TV</div><div class="channel-sub">Canlı yarış kanalı</div></div>
+</div>
+<button type="button" id="reload">Yayını yenile</button>
+</div>
 </section>
-<p class="note">Yayın, TAY TV canlı yayını açık olduğunda oynatılır.</p>
-<footer>© EL BANKO</footer>
-</main></body></html>
+<p class="help">Yayın başlamamışsa veya kanal gömülü oynatmaya izin vermiyorsa görüntü açılmayabilir. Böyle bir durumda yayın sağlayıcısının aktif bir canlı yayın sunması gerekir.</p>
+</main>
+<footer>EL BANKO</footer>
+</div>
+<script>
+(function(){
+  const player=document.getElementById('live-player');
+  const reload=document.getElementById('reload');
+  const streamUrl='https://www.youtube-nocookie.com/embed/live_stream?channel=UCjkRA7KEdp7PDKDUs396XHg&autoplay=0';
+  reload.addEventListener('click',function(){
+    reload.disabled=true;
+    player.src='about:blank';
+    window.setTimeout(function(){player.src=streamUrl;reload.disabled=false;},120);
+  });
+})();
+</script>
+</body>
+</html>
