@@ -1,11 +1,18 @@
 const http = require("node:http");
+const crypto = require("node:crypto");
+const { Pool } = require("pg");
 const SITE_ORIGIN = process.env.SITE_ORIGIN || "https://el-banko.onrender.com";
 const PORT = process.env.PORT || 10000;
 const TJK_HOME = "https://www.tjk.org/TR/YarisSever/Info/Page/GunlukYarisProgrami";
 let cache = { until: 0, data: null };
+const db = process.env.DATABASE_URL ? new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false}}) : null;
+let dbReady = false;
+async function initMembers(){if(!db)return;await db.query("CREATE TABLE IF NOT EXISTS members (id BIGSERIAL PRIMARY KEY, full_name VARCHAR(100) NOT NULL, username VARCHAR(30) UNIQUE NOT NULL, email VARCHAR(254) UNIQUE NOT NULL, phone VARCHAR(25), password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), status VARCHAR(20) NOT NULL DEFAULT 'pending')");dbReady=true;console.log("EL BANKO member table ready");}
+function jsonBody(req){return new Promise((resolve,reject)=>{let data="";req.on("data",c=>{data+=c;if(data.length>10000)reject(new Error("Form çok büyük"));});req.on("end",()=>{try{resolve(JSON.parse(data||"{}"));}catch{reject(new Error("Form bilgileri okunamadı"));}});req.on("error",reject);});}
+function hashPassword(password){return new Promise((resolve,reject)=>{const salt=crypto.randomBytes(16);crypto.scrypt(password,salt,64,(err,key)=>err?reject(err):resolve(salt.toString("hex")+":"+key.toString("hex")));});}
 
 function send(res,status,data){
-  res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Access-Control-Allow-Origin":SITE_ORIGIN,"Access-Control-Allow-Methods":"GET, OPTIONS","Access-Control-Allow-Headers":"Content-Type","Cache-Control":"public, max-age=60","Vary":"Origin"});
+  res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Access-Control-Allow-Origin":SITE_ORIGIN,"Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type","Cache-Control":"public, max-age=60","Vary":"Origin"});
   res.end(JSON.stringify(data));
 }
 function cleanText(s){
@@ -78,7 +85,20 @@ async function getDailyRaces(){
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS"){res.writeHead(204,{"Access-Control-Allow-Origin":SITE_ORIGIN,"Access-Control-Allow-Methods":"GET, OPTIONS"});return res.end();}
   const url=new URL(req.url,"http://localhost");
-  if(url.pathname==="/health") return send(res,200,{ok:true,service:"EL BANKO race data",time:new Date().toISOString()});
+  if(url.pathname==="/health") return send(res,200,{ok:true,service:"EL BANKO race data",membersDatabase:dbReady?"connected":"not_configured",time:new Date().toISOString()});
+  if(url.pathname==="/api/members" && req.method==="POST"){
+    if(!db || !dbReady)return send(res,503,{error:"Üyelik veri tabanı henüz bağlanmadı."});
+    if(req.headers.origin && req.headers.origin!==SITE_ORIGIN)return send(res,403,{error:"İstek kaynağı kabul edilmedi."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    const name=String(b.name||"").trim(),username=String(b.username||"").trim(),email=String(b.email||"").trim().toLowerCase(),phone=String(b.phone||"").trim(),password=String(b.password||"");
+    if(name.length<2||name.length>100)return send(res,400,{error:"Ad soyad bilgisi geçersiz."});
+    if(!/^[A-Za-z0-9._-]{3,30}$/.test(username))return send(res,400,{error:"Kullanıcı adı 3-30 karakter olmalı."});
+    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return send(res,400,{error:"Geçerli e-posta girin."});
+    if(password.length<10||password.length>128)return send(res,400,{error:"Şifre en az 10 karakter olmalı."});
+    if(b.termsAccepted!==true)return send(res,400,{error:"Üyelik koşullarını kabul etmelisiniz."});
+    try{const hash=await hashPassword(password);const r=await db.query("INSERT INTO members(full_name,username,email,phone,password_hash) VALUES($1,$2,$3,$4,$5) RETURNING id,full_name,username,email,status,created_at",[name,username,email,phone||null,hash]);return send(res,201,{ok:true,message:"Üyelik başvurunuz kaydedildi. Yönetici onayından sonra hesabınız etkinleştirilecektir.",member:r.rows[0]});}
+    catch(e){if(e.code==="23505")return send(res,409,{error:"Bu kullanıcı adı veya e-posta zaten kayıtlı."});console.error("Member registration failed",e.message);return send(res,500,{error:"Kayıt tamamlanamadı. Lütfen daha sonra deneyin."});}
+  }
   if(url.pathname==="/api/races" && req.method==="GET"){
     if(cache.data && cache.until>Date.now()) return send(res,200,{...cache.data,cached:true});
     try{const data=await getDailyRaces();cache={data,until:Date.now()+5*60*1000};return send(res,200,{...data,cached:false});}
@@ -86,4 +106,4 @@ const server=http.createServer(async(req,res)=>{
   }
   return send(res,404,{error:"Bulunamadı"});
 });
-server.listen(PORT,"0.0.0.0",()=>console.log("EL BANKO race API running on "+PORT));
+server.listen(PORT,"0.0.0.0",()=>{console.log("EL BANKO race API running on "+PORT);initMembers().catch(e=>console.error("Member DB setup failed:",e.message));});
