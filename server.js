@@ -9,7 +9,7 @@ function send(res,status,data){
   res.end(JSON.stringify(data));
 }
 function cleanText(s){
-  return String(s||"").replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi," ").replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi," ").replace(/<!--[\\s\\S]*?-->/g," ").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&#(\\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/\\s+/g," ").trim();
+  return String(s||"").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi," ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi," ").replace(/<!--[\s\S]*?-->/g," ").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/\s+/g," ").trim();
 }
 async function getHtml(url){
   const r=await fetch(url,{headers:{"User-Agent":"EL-BANKO daily race program reader/1.0","Accept":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(16000)});
@@ -18,32 +18,32 @@ async function getHtml(url){
 }
 function parseCourse(html,label,url){
   const races=[];
-  const headingRe=/<h[1-6]\\b[^>]*>([\\s\\S]*?)<\\/h[1-6]>/gi;
+  const headingRe=/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi;
   let hm;
   while((hm=headingRe.exec(html))){
     const title=cleanText(hm[1]);
-    const m=title.match(/(\\d+)\\.?\\s*Koşu\\s*([0-2]?\\d[.:][0-5]\\d)/i);
+    const m=title.match(/(\d+)\.?\s*Koşu\s*([0-2]?\d[.:][0-5]\d)/i);
     if(m) races.push({number:Number(m[1]),time:m[2].replace(".",":"),title});
   }
   const horses=[];
-  const trRe=/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi;
+  const trRe=/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
   let tm;
   while((tm=trRe.exec(html))){
     const row=tm[1];
     const cells=[];
-    const tdRe=/<t[dh]\\b[^>]*>([\\s\\S]*?)<\\/t[dh]>/gi;
+    const tdRe=/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
     let td;
     while((td=tdRe.exec(row))) cells.push(cleanText(td[1]));
     if(cells.length<8) continue;
-    const linkRe=/<a\\b[^>]*>([\\s\\S]*?)<\\/a>/gi;
+    const linkRe=/<a\b[^>]*>([\s\S]*?)<\/a>/gi;
     let lm, horse="";
     while((lm=linkRe.exec(row))){
-      const name=cleanText(lm[1]).replace(/\\s*\\(\\d+\\)\\s*$/,"").trim();
+      const name=cleanText(lm[1]).replace(/\s*\(\d+\)\s*$/,"").trim();
       if(name && !/^(PDF Program|Özet PDF Program|CSV Program|Resmi Program|Detaylı At Karşılaştırma|Bu derece|Image|Koşu Bilgisi|At Karşılaştırma|Jokey Karşılaştırma)$/i.test(name) && name.length>1 && !/Koşu$/.test(name)){horse=name;break;}
     }
     if(!horse || /^(Forma|At İsmi|Jokey|Antrenör|Sahip)$/.test(horse)) continue;
     if(horses.some(h=>h.name===horse)) continue;
-    const numberCell=cells.find(c=>/^\\d{1,2}$/.test(c));
+    const numberCell=cells.find(c=>/^\d{1,2}$/.test(c));
     horses.push({number:numberCell||"",name:horse,details:cells.slice(0,18)});
     if(horses.length>=300) break;
   }
@@ -52,10 +52,10 @@ function parseCourse(html,label,url){
 async function getDailyRaces(){
   const home=await getHtml(TJK_HOME);
   const links=[];
-  const aRe=/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi;
+  const aRe=/<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
   let m;
   while((m=aRe.exec(home))){
-    const href=(m[1].match(/href\\s*=\\s*["']([^"']+)["']/i)||[])[1];
+    const href=(m[1].match(/href\s*=\s*["']([^"']+)["']/i)||[])[1];
     const label=cleanText(m[2]);
     if(!href || !label || !href.includes("/TR/YarisSever/Info/Sehir/GunlukYarisProgrami")) continue;
     const url=new URL(href,TJK_HOME).toString();
