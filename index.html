@@ -92,6 +92,27 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .eb-chat-notice{padding:0 12px 10px;color:#aaa7a0;font-size:11px}
 @media(max-width:480px){#eb-chat-launch{right:12px;bottom:12px;padding:12px 15px}#eb-chat-panel{right:8px;bottom:70px;width:calc(100vw - 16px);height:min(540px,calc(100dvh - 90px))}}
 
+
+/* Site içi analiz kredileri + paylaşılabilir değerlendirme listesi */
+.eb-tools{margin:22px 0;display:grid;gap:16px}
+.eb-tool-card{padding:18px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,rgba(217,180,91,.07),#111216)}
+.eb-tool-card h2{margin:0 0 6px;color:var(--gold-light);font-size:22px}
+.eb-tool-card p{margin:0 0 14px;color:var(--muted);font-size:13px}
+.eb-credit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.eb-credit{padding:12px 8px;border:1px solid #48402e;border-radius:12px;background:#17171a;text-align:center}
+.eb-credit strong{display:block;color:#f4df9a;font-size:15px}
+.eb-credit span{display:block;color:#c3c0b8;font-size:12px;margin:4px 0 9px}
+.eb-credit button,.eb-action{width:100%;border:0;border-radius:9px;padding:10px;background:linear-gradient(135deg,#f4df9a,#c99b36);color:#171208;font-weight:850;cursor:pointer}
+.eb-legal{font-size:11px!important;margin:12px 0 0!important}
+.eb-eval-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.eb-eval-grid label{font-size:12px;color:#d9d5cb;font-weight:700}
+.eb-eval-grid input,.eb-eval-grid textarea{display:block;width:100%;min-width:0;margin-top:5px;padding:10px;border:1px solid #3c3a40;border-radius:9px;background:#0b0c0f;color:#fff;font:inherit;font-size:14px}
+.eb-eval-grid textarea{min-height:68px;resize:vertical}
+.eb-eval-actions{display:flex;gap:9px;margin-top:12px;flex-wrap:wrap}
+.eb-eval-actions button{flex:1;min-width:125px}
+.eb-status{margin-top:10px;color:#d9c88f;font-size:12px;overflow-wrap:anywhere}
+@media(max-width:480px){.eb-credit-grid{grid-template-columns:1fr}.eb-credit{display:grid;grid-template-columns:1fr auto;align-items:center;text-align:left;gap:4px 10px}.eb-credit span{margin:0}.eb-credit button{grid-column:2;grid-row:1/3}.eb-eval-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -131,6 +152,62 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   </div>
   <div id="race-results" class="race-empty" role="status" aria-live="polite"><span class="race-loading"></span>Resmî günlük program kontrol ediliyor…</div>
 </section>
+
+
+<section class="eb-tools" aria-label="EL BANKO araçları">
+  <div class="eb-tool-card">
+    <h2>Site İçi Analiz Kredileri</h2>
+    <p>Yarış istatistikleri ve site özellikleri için örnek paket görünümü.</p>
+    <div class="eb-credit-grid">
+      <div class="eb-credit"><strong>Başlangıç</strong><span>100 analiz kredisi</span><button type="button" data-credit="Başlangıç">Paketi seç</button></div>
+      <div class="eb-credit"><strong>Standart</strong><span>300 analiz kredisi</span><button type="button" data-credit="Standart">Paketi seç</button></div>
+      <div class="eb-credit"><strong>Premium</strong><span>750 analiz kredisi</span><button type="button" data-credit="Premium">Paketi seç</button></div>
+    </div>
+    <p class="eb-legal">Bu paketler şu an örnek arayüzdür; fiyatlandırma ve ödeme bağlantısı kurulmamıştır. Krediler bahis bakiyesi değildir ve bahis işlemlerinde kullanılamaz.</p>
+    <div id="eb-credit-status" class="eb-status" aria-live="polite"></div>
+  </div>
+  <div class="eb-tool-card">
+    <h2>Değerlendirme Listesi Oluştur</h2>
+    <p>Altı koşuya ait kendi notlarını kaydetmeden metin olarak düzenle ve paylaş. Bu araç bahis kuponu oluşturmaz veya bahis kabul etmez.</p>
+    <div class="eb-eval-grid">
+      <label>1. koşu değerlendirmesi<input id="eb-r1" maxlength="180" placeholder="Performans notu"></label>
+      <label>2. koşu değerlendirmesi<input id="eb-r2" maxlength="180" placeholder="Performans notu"></label>
+      <label>3. koşu değerlendirmesi<input id="eb-r3" maxlength="180" placeholder="Performans notu"></label>
+      <label>4. koşu değerlendirmesi<input id="eb-r4" maxlength="180" placeholder="Performans notu"></label>
+      <label>5. koşu değerlendirmesi<input id="eb-r5" maxlength="180" placeholder="Performans notu"></label>
+      <label>6. koşu değerlendirmesi<input id="eb-r6" maxlength="180" placeholder="Performans notu"></label>
+      <label style="grid-column:1/-1">Başlık (isteğe bağlı)<input id="eb-eval-title" maxlength="80" placeholder="Günün yarış değerlendirmeleri"></label>
+    </div>
+    <div class="eb-eval-actions"><button class="eb-action" id="eb-eval-share" type="button">Paylaş</button><button class="eb-action" id="eb-eval-copy" type="button">Metni hazırla</button></div>
+    <div id="eb-eval-status" class="eb-status" aria-live="polite"></div>
+  </div>
+</section>
+<script>
+(function(){
+ const creditStatus=document.getElementById('eb-credit-status');
+ document.querySelectorAll('[data-credit]').forEach(btn=>btn.addEventListener('click',()=>{
+   creditStatus.textContent='“'+btn.dataset.credit+'” paketi seçildi. Bu demo sürümünde ödeme veya kontör tanımlama yapılmıyor.';
+ }));
+ function getText(){
+   const title=document.getElementById('eb-eval-title').value.trim()||'Günün yarış değerlendirmeleri';
+   const lines=[title,'EL BANKO — bilgilendirme amaçlı performans notları',''];
+   for(let i=1;i<=6;i++){const v=document.getElementById('eb-r'+i).value.trim();lines.push(i+'. koşu: '+(v||'Henüz not eklenmedi'));}
+   lines.push('Not: Değerlendirmeler kesin sonuç veya kazanç garantisi değildir.');
+   return lines.join('\n');
+ }
+ const status=document.getElementById('eb-eval-status');
+ document.getElementById('eb-eval-copy').addEventListener('click',async()=>{
+   const text=getText();
+   try{await navigator.clipboard.writeText(text);status.textContent='Değerlendirme metni panoya kopyalandı.';}
+   catch(e){const w=window.open('','_blank');if(w){w.document.title='EL BANKO değerlendirme listesi';const pre=w.document.createElement('pre');pre.textContent=text;w.document.body.appendChild(pre);status.textContent='Metin ayrı pencerede açıldı; buradan kopyalayabilirsiniz.';}else{status.textContent=text;}}
+ });
+ document.getElementById('eb-eval-share').addEventListener('click',async()=>{
+   const text=getText();
+   if(navigator.share){try{await navigator.share({title:'EL BANKO yarış değerlendirmeleri',text});status.textContent='Paylaşım menüsü açıldı.';}catch(e){if(e.name!=='AbortError')status.textContent='Paylaşım açılamadı; “Metni hazırla” seçeneğini deneyin.';}}
+   else{try{await navigator.clipboard.writeText(text);status.textContent='Paylaşım bu cihazda desteklenmiyor; metin panoya kopyalandı.';}catch(e){status.textContent='“Metni hazırla” seçeneğini kullanın.';}}
+ });
+})();
+</script>
 
 </main>
 <footer>EL BANKO</footer>
