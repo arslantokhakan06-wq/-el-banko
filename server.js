@@ -88,7 +88,7 @@ function safeEqual(a,b){
   return aa.length===bb.length && aa.length>0 && crypto.timingSafeEqual(aa,bb);
 }
 function adminAuthorized(req){
-  const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"");
+  const token=String(req.headers.authorization||"").split(" ").pop();
   const expiry=adminSessions.get(token);
   if(!token||!expiry||expiry<Date.now()){adminSessions.delete(token);return false;}
   return true;
@@ -106,7 +106,7 @@ const server=http.createServer(async(req,res)=>{
     return send(res,200,{ok:true,token,expiresIn:28800});
   }
   if(url.pathname==="/api/admin/logout" && req.method==="POST"){
-    const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"");
+    const token=String(req.headers.authorization||"").split(" ").pop();
     adminSessions.delete(token);return send(res,200,{ok:true});
   }
   if(url.pathname==="/api/admin/members" && req.method==="GET"){
@@ -118,7 +118,7 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname.startsWith("/api/admin/members/") && url.pathname.endsWith("/status") && req.method==="POST"){
     if(!adminAuthorized(req))return send(res,401,{error:"Yönetici oturumu geçersiz veya süresi dolmuş."});
     if(!db||!dbReady)return send(res,503,{error:"Üyelik veri tabanı bağlı değil."});
-    const id=url.pathname.split("/")[4];if(!/^\\d+$/.test(id))return send(res,400,{error:"Üye numarası geçersiz."});
+    const id=url.pathname.split("/")[4];if(!Number.isSafeInteger(Number(id))||Number(id)<1)return send(res,400,{error:"Üye numarası geçersiz."});
     let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
     if(!["pending","approved","rejected","suspended"].includes(b.status))return send(res,400,{error:"Durum seçimi geçersiz."});
     try{const r=await db.query("UPDATE members SET status=$1 WHERE id=$2 RETURNING id,full_name,username,email,status,created_at",[b.status,id]);if(!r.rowCount)return send(res,404,{error:"Üye bulunamadı."});return send(res,200,{ok:true,member:r.rows[0]});}
