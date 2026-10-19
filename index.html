@@ -113,6 +113,24 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .eb-status{margin-top:10px;color:#d9c88f;font-size:12px;overflow-wrap:anywhere}
 @media(max-width:480px){.eb-credit-grid{grid-template-columns:1fr}.eb-credit{display:grid;grid-template-columns:1fr auto;align-items:center;text-align:left;gap:4px 10px}.eb-credit span{margin:0}.eb-credit button{grid-column:2;grid-row:1/3}.eb-eval-grid{grid-template-columns:1fr}}
 
+
+/* EL BANKO member registration form */
+.member-area{margin:28px 0 0;padding:clamp(16px,3vw,24px);border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(217,180,91,.09),rgba(17,18,22,.97) 48%);box-shadow:0 16px 48px #0005}
+.member-area h2{font-size:clamp(22px,4vw,29px);margin:0 0 6px}
+.member-area .member-intro{font-size:13px;color:var(--muted);margin:0 0 16px}
+.member-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.member-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.member-field label{font-size:12px;color:#e5d5a5;font-weight:750}
+.member-field input{width:100%;min-width:0;border:1px solid #3a3832;border-radius:10px;padding:12px;background:#0d0e11;color:#fff;font:inherit}
+.member-field input:focus{outline:2px solid #d9b45b;outline-offset:1px}
+.member-full{grid-column:1/-1}
+.member-terms{display:flex;gap:9px;align-items:flex-start;color:#c5c4c9;font-size:12px}
+.member-terms input{margin-top:3px;accent-color:#d9b45b}
+.member-submit{width:100%;border-radius:10px;background:linear-gradient(135deg,#f4df9a,#c99b36);color:#15120a;font-weight:900;padding:13px}
+.member-notice{margin-top:13px;padding:12px;border:1px solid #5a4a25;border-radius:10px;background:#1c1912;color:#e9d8a7;font-size:12px}
+.member-result{display:none;margin-top:12px;padding:12px;border-radius:10px;background:#18251c;color:#c5f0d0;font-size:13px}
+@media(max-width:560px){.member-grid{grid-template-columns:1fr}.member-full{grid-column:auto}}
+
 </style>
 </head>
 <body>
@@ -268,6 +286,27 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 })();
 </script>
 
+
+<section class="member-area" id="uye-ol">
+  <div class="eyebrow"><span class="dot"></span> EL BANKO ÜYELİK</div>
+  <h2>Ücretsiz Üye Ol</h2>
+  <p class="member-intro">Üyelik formunu doldurarak kayıt taslağını hazırlayın.</p>
+  <form id="eb-member-form" autocomplete="on">
+    <div class="member-grid">
+      <div class="member-field"><label for="eb-member-name">Ad soyad *</label><input id="eb-member-name" name="name" autocomplete="name" maxlength="100" required placeholder="Adınız ve soyadınız"></div>
+      <div class="member-field"><label for="eb-member-username">Kullanıcı adı *</label><input id="eb-member-username" name="username" autocomplete="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" required placeholder="Kullanıcı adınız"></div>
+      <div class="member-field"><label for="eb-member-email">E-posta *</label><input id="eb-member-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="ornek@eposta.com"></div>
+      <div class="member-field"><label for="eb-member-phone">Telefon (isteğe bağlı)</label><input id="eb-member-phone" name="phone" type="tel" autocomplete="tel" maxlength="25" placeholder="05xx xxx xx xx"></div>
+      <div class="member-field"><label for="eb-member-password">Şifre *</label><input id="eb-member-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="En az 10 karakter"></div>
+      <div class="member-field"><label for="eb-member-confirm">Şifre tekrar *</label><input id="eb-member-confirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="Şifrenizi tekrar yazın"></div>
+      <div class="member-full"><label class="member-terms"><input id="eb-member-terms" type="checkbox" required><span>Gizlilik bilgilendirmesini okuduğumu ve üyelik koşullarını kabul ettiğimi onaylıyorum. *</span></label></div>
+      <div class="member-full"><button class="member-submit" type="submit">Üyelik Formunu Kontrol Et</button></div>
+    </div>
+    <div id="eb-member-result" class="member-result" role="status" aria-live="polite"></div>
+  </form>
+  <div class="member-notice"><strong>Önemli:</strong> Bu ekran şu an form önizlemesidir; kayıt bilgileri sunucuya gönderilmez ve üyelik oluşturulmaz. Gerçek kayıt sistemi etkinleştirilene kadar bu forma gerçek şifrenizi girmeyin.</div>
+</section>
+
 <button id="eb-chat-launch" type="button" aria-controls="eb-chat-panel" aria-expanded="false">💬 Müşteri Sohbeti</button>
 <section id="eb-chat-panel" role="dialog" aria-label="EL BANKO site içi sohbet" aria-modal="false">
   <header class="eb-chat-head"><div><strong>EL BANKO Destek</strong><small>Site içi sohbet</small></div><button id="eb-chat-close" type="button" aria-label="Sohbeti kapat">×</button></header>
@@ -300,6 +339,27 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
    bubble.appendChild(document.createTextNode((name.value.trim()?name.value.trim()+': ':'')+value));
    const stamp=document.createElement('small');stamp.textContent='Bu cihazdaki önizleme';bubble.appendChild(stamp);
    log.appendChild(bubble);message.value='';log.scrollTop=log.scrollHeight;
+ });
+})();
+</script>
+
+
+<script>
+(function(){
+ const form=document.getElementById('eb-member-form');
+ if(!form)return;
+ const password=document.getElementById('eb-member-password');
+ const confirm=document.getElementById('eb-member-confirm');
+ const result=document.getElementById('eb-member-result');
+ function match(){confirm.setCustomValidity(password.value===confirm.value?'':'Şifreler aynı değil.');}
+ password.addEventListener('input',match);
+ confirm.addEventListener('input',match);
+ form.addEventListener('submit',function(event){
+   event.preventDefault();match();
+   if(!form.reportValidity())return;
+   result.style.display='block';
+   result.textContent='Form alanları kontrol edildi. Bu sürümde sunucu bağlantısı olmadığı için kayıt oluşturulmadı; bilgileriniz gönderilmedi.';
+   password.value='';confirm.value='';
  });
 })();
 </script>
