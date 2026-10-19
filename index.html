@@ -34,6 +34,20 @@ button:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px}
 .help{margin:17px auto 0;text-align:center;max-width:740px;color:#8e9098;font-size:12px}
 footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-spacing:.08em}
 @media(max-width:560px){.page{padding:12px}.top{padding:12px 0 18px}main{padding-top:25px}.intro{margin-bottom:19px}.player{aspect-ratio:16/10;min-height:205px}.controls{align-items:flex-start}.controls button{padding:9px 12px}}
+
+.race-data{margin:28px 0 0;padding:clamp(16px,3vw,24px);border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(217,180,91,.09),rgba(17,18,22,.96) 48%);box-shadow:0 16px 48px #0005}
+.race-data h2{margin:0 0 8px;font-size:clamp(21px,4vw,28px);letter-spacing:-.025em}
+.race-data p{color:var(--muted);font-size:13px;margin:0 0 16px}
+.race-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.race-item{border:1px solid #343239;background:#17181d;border-radius:12px;padding:13px}
+.race-item strong{display:block;color:var(--gold-light);font-size:12px;margin-bottom:5px}
+.race-item span{font-size:12px;color:#c2c2c8}
+.race-status{display:flex;gap:9px;align-items:flex-start;border-radius:10px;background:#1b1b1d;padding:12px;color:#c7c7cb;font-size:12px;margin:12px 0 16px}
+.race-status b{color:var(--gold-light)}
+.race-link{display:inline-flex;text-decoration:none;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:11px 16px;background:linear-gradient(135deg,#f4df9a,#c99b36);color:#15120a;font-weight:850;font-size:13px}
+.race-link:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px}
+@media(max-width:600px){.race-grid{grid-template-columns:1fr}.race-data{margin-top:22px}}
+
 </style>
 </head>
 <body>
@@ -56,6 +70,20 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 </div>
 </section>
 <p class="help">Yayın başlamamışsa veya kanal gömülü oynatmaya izin vermiyorsa görüntü açılmayabilir. Böyle bir durumda yayın sağlayıcısının aktif bir canlı yayın sunması gerekir.</p>
+
+<section class="race-data" aria-labelledby="race-data-title">
+  <div class="eyebrow" style="justify-content:flex-start;letter-spacing:.13em">GÜNLÜK VERİ KAYNAĞI</div>
+  <h2 id="race-data-title">Günlük Yarış Programı</h2>
+  <p>Koşu saatleri ve at bilgileri için resmi yarış programını kontrol edin. Program ve katılımcılar gün içinde değişebilir.</p>
+  <div class="race-grid">
+    <div class="race-item"><strong>KOŞU PROGRAMI</strong><span>Hipodrom, tarih ve koşu saatleri</span></div>
+    <div class="race-item"><strong>AT & JOKEY BİLGİLERİ</strong><span>Katılımcılar, sıklet ve koşu şartları</span></div>
+    <div class="race-item"><strong>PERFORMANS VERİSİ</strong><span>Geçmiş sonuçlar ve karşılaştırma bilgileri</span></div>
+  </div>
+  <div class="race-status"><span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Resmi program bağlantısı eklendi. Bu sitede otomatik veri çekme ve yapay zekâ analizi henüz etkin değil; güncel bilgiyi resmi kaynaktan doğrulayın.</span></div>
+  <a class="race-link" href="https://www.tjk.org/TR/YarisSever/Info/page/GunlukYarisProgrami" target="_blank" rel="noopener noreferrer">Resmî TJK günlük programını aç ↗</a>
+</section>
+
 </main>
 <footer>EL BANKO</footer>
 </div>
