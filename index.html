@@ -336,14 +336,21 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
       <div class="eb-message" id="eb-token-message" role="status" aria-live="polite">Deneme bakiyesiyle kupon taslağı oluşturabilirsin.</div>
     </div>
     <div class="eb-wallet-card">
-      <h3>➕ Jeton Al</h3>
-      <p>Şimdilik ücretsiz demo jetonları. Gerçek para ödeme sistemi bağlı değildir.</p>
+      <h3>🪙 Jeton Paketi Al</h3>
+      <p>İstediğin paketi seç. Gerçek ödeme henüz etkinleştirilmediği için şu anda ücret alınmaz.</p>
       <div class="eb-packages">
-        <div class="eb-package"><div><strong>Başlangıç</strong><small>+25 demo jeton</small></div><button type="button" data-demo-tokens="25">Ücretsiz al</button></div>
-        <div class="eb-package"><div><strong>Standart</strong><small>+100 demo jeton</small></div><button type="button" data-demo-tokens="100">Ücretsiz al</button></div>
-        <div class="eb-package"><div><strong>Plus</strong><small>+250 demo jeton</small></div><button type="button" data-demo-tokens="250">Ücretsiz al</button></div>
+        <div class="eb-package"><div><strong>Başlangıç Paketi</strong><small>100 jeton · ödeme beklemede</small></div><button type="button" data-token-package="Başlangıç Paketi · 100 jeton">Paketi seç</button></div>
+        <div class="eb-package"><div><strong>Standart Paket</strong><small>500 jeton · ödeme beklemede</small></div><button type="button" data-token-package="Standart Paket · 500 jeton">Paketi seç</button></div>
+        <div class="eb-package"><div><strong>Premium Paket</strong><small>1.000 jeton · ödeme beklemede</small></div><button type="button" data-token-package="Premium Paket · 1.000 jeton">Paketi seç</button></div>
       </div>
-      <div class="eb-message" id="eb-payment-message" role="status" aria-live="polite">Ödeme: Henüz bir ödeme sağlayıcısı bağlanmadı. Buradan ücret tahsil edilmez.</div>
+      <div class="eb-message" id="eb-payment-message" role="status" aria-live="polite">Durum: PayTR/iyzico ödeme bağlantısı kurulmadı. Kart bilgisi girme ve ödeme yapma alanı henüz açılmadı.</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(212,175,55,.2)">
+        <strong style="display:block;margin-bottom:8px">Ücretsiz demo jetonları</strong>
+        <div class="eb-packages">
+          <div class="eb-package"><div><strong>Deneme</strong><small>+25 demo jeton</small></div><button type="button" data-demo-tokens="25">Ücretsiz al</button></div>
+          <div class="eb-package"><div><strong>Deneme Plus</strong><small>+100 demo jeton</small></div><button type="button" data-demo-tokens="100">Ücretsiz al</button></div>
+        </div>
+      </div>
     </div>
     <div class="eb-wallet-card">
       <h3>🎟️ Kupon Yap</h3>
@@ -390,6 +397,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
  writeBalance(readBalance());renderCoupons();
  document.getElementById('eb-token-refresh').addEventListener('click',()=>{writeBalance(readBalance());tokenMsg.textContent='Bu cihazdaki demo bakiyesi yenilendi.'});
  document.querySelectorAll('[data-demo-tokens]').forEach(btn=>btn.addEventListener('click',()=>{const amount=Number(btn.getAttribute('data-demo-tokens'));const next=readBalance()+amount;writeBalance(next);tokenMsg.textContent=amount+' ücretsiz demo jeton eklendi. Yeni bakiye: '+next+'. Bu jetonlar para değildir.'}));
+ document.querySelectorAll('[data-token-package]').forEach(btn=>btn.addEventListener('click',()=>{const message=document.getElementById('eb-payment-message');message.textContent='Seçtiğin paket: '+btn.getAttribute('data-token-package')+'. Gerçek ödeme sistemi henüz bağlı olmadığı için satın alma tamamlanmadı ve ücret alınmadı.';}));
  document.getElementById('eb-coupon-form').addEventListener('submit',e=>{e.preventDefault();const title=document.getElementById('eb-coupon-title').value.trim();const details=document.getElementById('eb-coupon-details').value.trim();if(!title||!details){couponMsg.textContent='Lütfen başlık ve kupon içeriğini doldur.';return}const item={code:code(),title,details,createdAt:new Date().toISOString()};const items=readCoupons();items.push(item);writeCoupons(items.slice(-30));shareCode.value=item.code;couponMsg.textContent='Kupon taslağı oluşturuldu: '+item.code+'. Taslak yalnızca bu cihazda saklanır.';shareMsg.textContent='Kupon kodun hazır. Kopyalamak için düğmeye bas.';renderCoupons()});
  document.getElementById('eb-share-button').addEventListener('click',async()=>{const codeValue=shareCode.value.trim();if(!codeValue){shareMsg.textContent='Önce bir kupon taslağı oluştur.';return}const item=readCoupons().find(c=>c.code===codeValue);if(!item){shareMsg.textContent='Bu cihazda bu kodla eşleşen kupon yok.';return}const text='EL BANKO kupon taslağı: '+item.title+' | Kod: '+item.code+' | İçerik: '+item.details;try{await navigator.clipboard.writeText(text);shareMsg.textContent='Kupon metni panoya kopyalandı; istediğin yerde paylaşabilirsin.'}catch{shareMsg.textContent=text}});
  document.getElementById('eb-payment-button').addEventListener('click',()=>{document.getElementById('eb-payment-check').textContent='Kontrol sonucu: Gerçek ödeme sağlayıcısı bağlantısı henüz kurulmadı. Ödeme alınmadı. Entegrasyon tamamlandığında bu bölüm güvenli ödeme sayfasına yönlendirecek.'});
