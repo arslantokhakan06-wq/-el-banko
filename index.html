@@ -48,6 +48,17 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .race-link:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px}
 @media(max-width:600px){.race-grid{grid-template-columns:1fr}.race-data{margin-top:22px}}
 
+
+.race-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0}
+.race-meta{font-size:11px;color:#92939b}
+.race-results{overflow:auto;border:1px solid #343239;border-radius:12px;background:#111216}
+.race-results table{width:100%;border-collapse:collapse;min-width:480px;font-size:12px}
+.race-results th,.race-results td{text-align:left;padding:10px 12px;border-bottom:1px solid #292a30;vertical-align:top}
+.race-results th{color:var(--gold-light);background:#1a1916;position:sticky;top:0}
+.race-results td{color:#e2e1dc}
+.race-empty{padding:15px;border-radius:12px;background:#17181d;color:#c2c2c8;font-size:13px}
+.race-loading{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:7px}
+@media(max-width:600px){.race-actions{align-items:flex-start}.race-data .eyebrow{font-size:10px}}
 </style>
 </head>
 <body>
@@ -80,8 +91,12 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     <div class="race-item"><strong>AT & JOKEY BİLGİLERİ</strong><span>Katılımcılar, sıklet ve koşu şartları</span></div>
     <div class="race-item"><strong>PERFORMANS VERİSİ</strong><span>Geçmiş sonuçlar ve karşılaştırma bilgileri</span></div>
   </div>
-  <div class="race-status"><span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Günlük yarış verisi bu sayfanın içinde gösterilecek. Canlı veri bağlantısı henüz kurulmadı; doğrulanmamış yarış bilgisi gösterilmiyor.</span></div>
-  <div class="race-status"><span aria-hidden="true">🔒</span><span>EL BANKO’dan ayrılmadan görüntüleme hedefleniyor. Otomatik aktarım için TJK’nın izinli veri erişimi veya bir veri sağlayıcısının API anahtarı ve sunucu bağlantısı gerekiyor.</span></div>
+  <div class="race-status" id="race-status"><span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Günlük yarış programına bağlanılıyor…</span></div>
+  <div class="race-actions">
+    <span class="race-meta" id="race-updated">Veri henüz alınmadı</span>
+    <button type="button" id="refresh-races">Yarış verisini yenile</button>
+  </div>
+  <div id="race-results" class="race-empty" role="status" aria-live="polite"><span class="race-loading"></span>Resmî günlük program kontrol ediliyor…</div>
 </section>
 
 </main>
@@ -97,6 +112,43 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     player.src='about:blank';
     window.setTimeout(function(){player.src=streamUrl;reload.disabled=false;},120);
   });
+
+  const raceApi='https://el-banko-race-data.onrender.com/api/races';
+  const raceStatus=document.getElementById('race-status');
+  const raceResults=document.getElementById('race-results');
+  const raceUpdated=document.getElementById('race-updated');
+  const refreshRaces=document.getElementById('refresh-races');
+  function safeText(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+  async function loadRaces(){
+    refreshRaces.disabled=true;
+    raceStatus.innerHTML='<span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Resmî günlük yarış verisi isteniyor…</span>';
+    raceResults.className='race-empty';
+    raceResults.innerHTML='<span class="race-loading"></span>Veri kaynağı kontrol ediliyor…';
+    try{
+      const response=await fetch(raceApi,{headers:{'Accept':'application/json'},cache:'no-store'});
+      const data=await response.json();
+      if(!response.ok) throw new Error(data.error||'Yarış verisi alınamadı.');
+      const rows=Array.isArray(data.rows)?data.rows:[];
+      raceUpdated.textContent='Son kontrol: '+new Date(data.fetchedAt).toLocaleString('tr-TR');
+      if(rows.length){
+        const head=rows[0];
+        const body=rows.slice(1).map(row=>'<tr>'+row.map(cell=>'<td>'+safeText(cell)+'</td>').join('')+'</tr>').join('');
+        raceResults.className='race-results';
+        raceResults.innerHTML='<table><thead><tr>'+head.map(cell=>'<th>'+safeText(cell)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table>';
+        raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri kaynağı:</b> '+safeText(data.source)+' · program sayfasından '+rows.length+' tablo satırı alındı. Sonuçlar bilgi amaçlıdır.</span>';
+      }else{
+        raceResults.className='race-empty';
+        raceResults.textContent=data.notice||'Kaynak açıldı ancak program tablosu tanınan biçimde alınamadı.';
+        raceStatus.innerHTML='<span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Kaynağa ulaşıldı, fakat yarış tablosu otomatik okunamadı. Veri uydurulmadı.</span>';
+      }
+    }catch(error){
+      raceResults.className='race-empty';
+      raceResults.textContent='Günlük yarış verisi şu anda alınamadı. Biraz sonra “Yarış verisini yenile” düğmesine basın.';
+      raceStatus.innerHTML='<span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Canlı kaynak bağlantısı şu anda yanıt vermiyor. Otomatik veri gelmeden program bilgisi gösterilmeyecek.</span>';
+    }finally{refreshRaces.disabled=false;}
+  }
+  refreshRaces.addEventListener('click',loadRaces);
+  loadRaces();
 })();
 </script>
 </body>
