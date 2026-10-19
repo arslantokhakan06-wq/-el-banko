@@ -94,7 +94,7 @@ function adminAuthorized(req){
   return true;
 }
 const server=http.createServer(async(req,res)=>{
-  if(req.method==="OPTIONS"){res.writeHead(204,{"Access-Control-Allow-Origin":SITE_ORIGIN,"Access-Control-Allow-Methods":"GET, OPTIONS"});return res.end();}
+  if(req.method==="OPTIONS"){res.writeHead(204,{"Access-Control-Allow-Origin":SITE_ORIGIN,"Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"});return res.end();}
   const url=new URL(req.url,"http://localhost");
   if(url.pathname==="/health") return send(res,200,{ok:true,service:"EL BANKO race data",membersDatabase:dbReady?"connected":"not_configured",time:new Date().toISOString()});
   if(url.pathname==="/api/admin/login" && req.method==="POST"){
