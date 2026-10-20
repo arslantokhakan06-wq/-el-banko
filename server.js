@@ -47,18 +47,22 @@ function parseHorses(html){
 }
 function parseCourse(html,label,url){
   const headings=[];
-  const headingRe=/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi;
+  const headingRe=/<h[1-6]\\b[^>]*>([\\s\\S]*?)<\\/h[1-6]>/gi;
   let hm;
   while((hm=headingRe.exec(html))){
     const title=cleanText(hm[1]);
-    const m=title.match(/(\d+)\.?\s*Koşu\s*([0-2]?\d[.:][0-5]\d)/i);
+    const m=title.match(/(\\d+)\\.?\\s*Koşu\\s*([0-2]?\\d[.:][0-5]\\d)/i);
     if(m)headings.push({number:Number(m[1]),time:m[2].replace(".",":"),title,offset:hm.index,end:headingRe.lastIndex});
   }
-  const races=headings.map((h,i)=>{
-    const next=headings[i+1];
-    const segment=html.slice(h.end,next?next.offset:Math.min(html.length,h.end+250000));
-    return {number:h.number,time:h.time,title:h.title,horses:parseHorses(segment)};
-  });
+  const racesByNumber=new Map();
+  for(let i=0;i<headings.length;i++){
+    const h=headings[i],next=headings[i+1];
+    const segment=html.slice(h.end,next?next.offset:Math.min(html.length,h.end+350000));
+    const horses=parseHorses(segment);
+    if(!horses.length)continue;
+    if(!racesByNumber.has(h.number))racesByNumber.set(h.number,{number:h.number,time:h.time,title:h.title,horses});
+  }
+  const races=[...racesByNumber.values()].sort((a,b)=>a.number-b.number);
   const allHorses=[];
   for(const race of races)for(const horse of race.horses)if(!allHorses.some(h=>h.name===horse.name))allHorses.push(horse);
   return {course:label||"Hipodrom",url,races,horseCount:allHorses.length,horses:allHorses,updatedAt:new Date().toISOString()};
