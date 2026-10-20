@@ -163,4 +163,17 @@ const server=http.createServer(async(req,res)=>{
   }
   return send(res,404,{error:"Bulunamadı"});
 });
-server.listen(PORT,"0.0.0.0",()=>{console.log("EL BANKO race API running on "+PORT);initMembers().catch(e=>console.error("Member DB setup failed:",e.message));});
+server.listen(PORT,"0.0.0.0",()=>{
+  console.log("EL BANKO race API running on "+PORT);
+  initMembers().catch(e=>console.error("Member DB setup failed:",e.message));
+  const warmup=getDailyRaces();
+  refreshPromise=warmup;
+  warmup.then(data=>{
+    cache={data,until:Date.now()+5*60*1000};
+    const raceCount=data.courses.reduce((n,c)=>n+(c.races||[]).length,0);
+    const horseCount=data.courses.reduce((n,c)=>n+(c.horseCount||0),0);
+    console.log("EL BANKO race data ready: "+data.courses.length+" courses, "+raceCount+" races, "+horseCount+" horses");
+  },e=>console.error("EL BANKO initial race data check failed:",e.message)).finally(()=>{
+    if(refreshPromise===warmup)refreshPromise=null;
+  });
+});
