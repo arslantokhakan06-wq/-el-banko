@@ -48,11 +48,11 @@ function parseHorses(html){
 }
 function parseCourse(html,label,url){
   const headings=[];
-  const headingRe=/<h[1-6]\\b[^>]*>([\\s\\S]*?)<\\/h[1-6]>/gi;
+  const headingRe=/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi;
   let hm;
   while((hm=headingRe.exec(html))){
     const title=cleanText(hm[1]);
-    const m=title.match(/(\\d+)\\.?\\s*Koşu\\s*([0-2]?\\d[.:][0-5]\\d)/i);
+    const m=title.match(/(\d+)\.?\s*Koşu\s*([0-2]?\d[.:][0-5]\d)/i);
     if(m)headings.push({number:Number(m[1]),time:m[2].replace(".",":"),title,offset:hm.index,end:headingRe.lastIndex});
   }
   const racesByNumber=new Map();
