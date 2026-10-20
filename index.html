@@ -198,6 +198,26 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .race-mini .race-empty{padding:9px;font-size:11px}
 @media(max-width:600px){.race-data{padding:13px;margin-top:14px}.race-course-summary{padding:12px}.race-status{font-size:11px;padding:10px}.race-actions{gap:8px}.race-actions button{font-size:11px!important;padding:9px 11px!important}}
 
+
+/* Compact accordion for six-leg horse selection */
+.eb-leg-picker{border:1px solid #514523;border-radius:8px;background:#101115;min-width:130px}
+.eb-leg-picker summary{cursor:pointer;list-style:none;padding:8px 10px;color:var(--gold-light);font-size:12px;font-weight:800}
+.eb-leg-picker summary::-webkit-details-marker{display:none}
+.eb-leg-picker summary:after{content:"＋";float:right;color:var(--gold-light)}
+.eb-leg-picker[open] summary:after{content:"−"}
+.eb-leg-picker-body{padding:8px;max-height:220px;overflow:auto;border-top:1px solid #343239}
+.eb-leg-picker-body label{font-size:12px}
+#eb-sixfold-legs .race-table-wrap{overflow:visible}
+@media(max-width:600px){
+ #eb-sixfold-legs table{min-width:0!important;table-layout:fixed}
+ #eb-sixfold-legs th:nth-child(1),#eb-sixfold-legs td:nth-child(1){width:18%}
+ #eb-sixfold-legs th:nth-child(2),#eb-sixfold-legs td:nth-child(2){width:20%}
+ #eb-sixfold-legs th:nth-child(3),#eb-sixfold-legs td:nth-child(3){width:20%}
+ #eb-sixfold-legs th:nth-child(4),#eb-sixfold-legs td:nth-child(4){width:42%}
+ #eb-sixfold-legs th,#eb-sixfold-legs td{padding:6px 4px!important;overflow-wrap:anywhere}
+ .eb-leg-picker summary{padding:7px 6px;font-size:11px}
+}
+
 </style>
 </head>
 <body>
@@ -287,7 +307,8 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     legsEl.innerHTML='<div class="race-meta">Her ayakta bir veya daha fazla at seçin. Altı ayak tamamlanınca kupon taslağı oluşturabilirsiniz.</div><table><thead><tr><th>Ayak</th><th>Koşu</th><th>Saat</th><th>At seçimi</th></tr></thead><tbody>'+selected.map((r,i)=>{
       const raceHorses=r&&Array.isArray(r.horses)?r.horses:[];
       const options=raceHorses.length?'<div style="display:flex;flex-wrap:wrap;gap:8px">'+raceHorses.map((h,j)=>'<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid #514523;border-radius:8px"><input type="checkbox" data-leg="'+i+'" data-horse="'+esc(h.number||h.name||j+1)+'" style="accent-color:#d4af37"><span>'+esc(h.number?h.number+'. ':'')+esc(h.name||('At '+(j+1)))+'</span></label>').join('')+'</div>':'<label>At numaraları (virgülle ayırın)<input aria-label="'+(i+1)+'. ayak at numaraları" data-leg-input="'+i+'" placeholder="Örn. 2, 4, 7" style="display:block;width:100%;margin-top:6px;padding:8px;background:#0b0c0f;color:#fff;border:1px solid #3c3a40;border-radius:7px"></label>';
-      return '<tr><td><strong>'+(i+1)+'. ayak</strong></td><td>'+(r?esc(r.number)+'. koşu':'—')+'</td><td>'+(r?esc(r.time||'Belirtilmedi'):'—')+'</td><td>'+(r?options:'Bu hipodromda bu ayak için koşu bulunamadı')+'</td></tr>';
+      const compactOptions='<details class="eb-leg-picker"><summary>Atları göster / seç ('+(raceHorses.length||'elle giriş')+')</summary><div class="eb-leg-picker-body">'+options+'</div></details>';
+      return '<tr><td><strong>'+(i+1)+'. ayak</strong></td><td>'+(r?esc(r.number)+'. koşu':'—')+'</td><td>'+(r?esc(r.time||'Belirtilmedi'):'—')+'</td><td>'+(r?compactOptions:'Bu hipodromda bu ayak için koşu bulunamadı')+'</td></tr>';
     }).join('')+'</tbody></table>';
     horseSuggestions.className='race-empty';
     horseSuggestions.textContent=selected.some(r=>r&&Array.isArray(r.horses)&&r.horses.length)?'Her ayak için yalnızca o koşunun atlarını işaretleyin. Seçimler kupon taslağına aktarılır.':'Canlı at isimleri şu anda veri akışında yok. Sistem at uydurmaz; geçici olarak numaraları elle girebilirsiniz.';
