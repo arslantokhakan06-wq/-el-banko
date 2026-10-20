@@ -460,6 +460,23 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   <div class="eyebrow" style="justify-content:flex-start;letter-spacing:.13em">EL BANKO OYUN MERKEZİ</div>
   <h2 id="eb-wallet-title">Jeton Al · Kupon Yap · Kupon Paylaş</h2>
   <p class="eb-wallet-intro">Kupon taslağını oluştur ve paylaş. Jetonlar ücretsiz olarak verilmez; satın alma sistemi şu anda etkin değildir.</p>
+  <div class="eb-wallet-card" style="margin-bottom:12px" id="eb-member-account">
+    <h3>👤 Üye hesabım</h3>
+    <p>Hesabınıza giriş yaparak sunucuda saklanan kontör bakiyenizi, işlem geçmişinizi ve kupon taslaklarınızı görüntüleyin.</p>
+    <form id="eb-login-form" class="eb-wallet-form">
+      <label for="eb-login-identity">Kullanıcı adı veya e-posta<input id="eb-login-identity" autocomplete="username" required maxlength="254" placeholder="Kullanıcı adı / e-posta"></label>
+      <label for="eb-login-password">Şifre<input id="eb-login-password" type="password" autocomplete="current-password" required maxlength="128" placeholder="Şifreniz"></label>
+      <button type="submit" class="eb-action">Üye Girişi</button>
+    </form>
+    <div id="eb-account-message" class="eb-message" role="status" aria-live="polite">Giriş için üyelik başvurunuzun yönetici tarafından onaylanmış olması gerekir.</div>
+    <div id="eb-account-controls" hidden>
+      <p id="eb-account-name"></p>
+      <button type="button" id="eb-account-refresh" class="eb-action secondary">Bakiyemi ve işlem geçmişimi yenile</button>
+      <button type="button" id="eb-account-logout" class="eb-action secondary">Güvenli çıkış</button>
+      <div id="eb-transaction-history" class="eb-coupon-list"></div>
+      <div id="eb-saved-drafts" class="eb-coupon-list"></div>
+    </div>
+  </div>
   <div class="eb-wallet-grid">
     <div class="eb-wallet-card">
       <h3>🪙 Jeton Cüzdanım</h3>
@@ -546,6 +563,35 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
  function code(){return 'EB-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Date.now().toString(36).slice(-5).toUpperCase()}
  function renderCoupons(){const items=readCoupons();couponList.replaceChildren();if(!items.length)return;items.slice().reverse().slice(0,5).forEach(item=>{const card=document.createElement('div');card.className='eb-coupon';const title=document.createElement('strong');title.textContent=item.title;const detail=document.createElement('small');detail.textContent='Kod: '+item.code+' · '+item.details;card.append(title,detail);couponList.append(card)})}
  writeBalance(readBalance());renderCoupons();
+ const API='https://el-banko-race-api.onrender.com';
+ const accountMessage=document.getElementById('eb-account-message');
+ const loginForm=document.getElementById('eb-login-form');
+ const accountControls=document.getElementById('eb-account-controls');
+ const transactionHistory=document.getElementById('eb-transaction-history');
+ const savedDrafts=document.getElementById('eb-saved-drafts');
+ function getToken(){try{return sessionStorage.getItem('elbanko_member_token')||''}catch{return ''}}
+ function setToken(t){try{if(t)sessionStorage.setItem('elbanko_member_token',t);else sessionStorage.removeItem('elbanko_member_token')}catch{}}
+ async function api(path,options={}){const headers={'Accept':'application/json','Content-Type':'application/json',...(options.headers||{})};const token=getToken();if(token)headers.Authorization='Bearer '+token;const r=await fetch(API+path,{...options,headers});const data=await r.json().catch(()=>({error:'Sunucu yanıtı okunamadı.'}));if(!r.ok)throw new Error(data.error||'İşlem tamamlanamadı.');return data}
+ async function refreshAccount(){
+   if(!getToken()){accountControls.hidden=true;return}
+   try{
+     const account=await api('/api/account');accountControls.hidden=false;
+     document.getElementById('eb-account-name').textContent=account.member.name+' · '+account.member.username+' · Bakiye: '+account.wallet.balance.toLocaleString('tr-TR')+' kontör';
+     balanceEl.textContent=String(account.wallet.balance);
+     tokenMsg.textContent='Sunucudaki doğrulanmış hesap bakiyesi gösteriliyor. Kontör yalnızca doğrulanmış ödeme sonrasında eklenir.';
+     const hist=await api('/api/account/transactions');transactionHistory.replaceChildren();
+     const heading=document.createElement('strong');heading.textContent='İşlem geçmişi';transactionHistory.append(heading);
+     if(!hist.transactions.length){const empty=document.createElement('p');empty.textContent='Henüz hesap işlemi yok.';transactionHistory.append(empty)}
+     hist.transactions.forEach(tx=>{const row=document.createElement('div');row.className='eb-coupon';const t=document.createElement('strong');t.textContent=tx.description;const d=document.createElement('small');d.textContent=(tx.amount>0?'+':'')+tx.amount+' kontör · '+tx.status+' · bakiye '+tx.balance_after;row.append(t,d);transactionHistory.append(row)});
+     const drafts=await api('/api/coupon-drafts');savedDrafts.replaceChildren();const dh=document.createElement('strong');dh.textContent='Hesabınıza kayıtlı kupon taslakları';savedDrafts.append(dh);
+     if(!drafts.drafts.length){const empty=document.createElement('p');empty.textContent='Henüz kayıtlı taslak yok.';savedDrafts.append(empty)}
+     drafts.drafts.forEach(draft=>{const row=document.createElement('div');row.className='eb-coupon';const t=document.createElement('strong');t.textContent=draft.title;const d=document.createElement('small');d.textContent=draft.content;row.append(t,d);savedDrafts.append(row)});
+   }catch(e){accountMessage.textContent=e.message;setToken('');accountControls.hidden=true}
+ }
+ loginForm.addEventListener('submit',async e=>{e.preventDefault();const btn=loginForm.querySelector('button');btn.disabled=true;try{const data=await api('/api/members/login',{method:'POST',body:JSON.stringify({identity:document.getElementById('eb-login-identity').value.trim(),password:document.getElementById('eb-login-password').value})});setToken(data.token);accountMessage.textContent='Giriş başarılı. Hesabınız açıldı.';loginForm.reset();await refreshAccount()}catch(err){accountMessage.textContent=err.message}finally{btn.disabled=false}});
+ document.getElementById('eb-account-refresh').addEventListener('click',refreshAccount);
+ document.getElementById('eb-account-logout').addEventListener('click',async()=>{try{await api('/api/members/logout',{method:'POST',body:'{}'})}catch{}setToken('');accountControls.hidden=true;accountMessage.textContent='Güvenli çıkış yapıldı.'});
+ if(getToken())refreshAccount();
  let selectedPackage=null;
  const selectedPackageEl=document.getElementById('eb-selected-package');
  const buyPackageButton=document.getElementById('eb-buy-package');
@@ -586,7 +632,8 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
    couponMsg.textContent='Seçimler kupon alanına aktarıldı. Kontrol edip “Kupon Taslağını Kaydet” düğmesine bas.';
    document.getElementById('eb-coupon-center').scrollIntoView({behavior:'smooth',block:'center'});
  });
- document.getElementById('eb-coupon-form').addEventListener('submit',e=>{e.preventDefault();const title=document.getElementById('eb-coupon-title').value.trim();const details=document.getElementById('eb-coupon-details').value.trim();if(!title||!details){couponMsg.textContent='Lütfen başlık ve kupon içeriğini doldur.';return}const item={code:code(),title,details,createdAt:new Date().toISOString()};const items=readCoupons();items.push(item);writeCoupons(items.slice(-30));shareCode.value=item.code;couponMsg.textContent='Kupon taslağı oluşturuldu: '+item.code+'. Taslak yalnızca bu cihazda saklanır.';shareMsg.textContent='Kupon kodun hazır. Kopyalamak için düğmeye bas.';renderCoupons()});
+ document.getElementById('eb-coupon-form').addEventListener('submit',async e=>{e.preventDefault();const title=document.getElementById('eb-coupon-title').value.trim();const details=document.getElementById('eb-coupon-details').value.trim();if(!title||!details){couponMsg.textContent='Lütfen başlık ve kupon içeriğini doldur.';return}if(!getToken()){couponMsg.textContent='Kupon taslağını hesabınıza kaydetmek için önce onaylı üye hesabınızla giriş yapın.';document.getElementById('eb-member-account').scrollIntoView({behavior:'smooth',block:'center'});return}try{const saved=await api('/api/coupon-drafts',{method:'POST',body:JSON.stringify({title,content:details})});const item={code:'EB-'+saved.draft.id,title,details,createdAt:saved.draft.created_at};const items=readCoupons();items.push(item);writeCoupons(items.slice(-30));shareCode.value=item.code;couponMsg.textContent='Kupon taslağı üye hesabınıza kaydedildi. Bu yalnızca taslaktır; gerçek bahis gönderilmedi.';shareMsg.textContent='Kupon kodun hazır. Kopyalamak için düğmeye bas.';renderCoupons();await refreshAccount()}catch(err){couponMsg.textContent=err.message}});
+
  document.getElementById('eb-share-button').addEventListener('click',async()=>{const codeValue=shareCode.value.trim();if(!codeValue){shareMsg.textContent='Önce bir kupon taslağı oluştur.';return}const item=readCoupons().find(c=>c.code===codeValue);if(!item){shareMsg.textContent='Bu cihazda bu kodla eşleşen kupon yok.';return}const text='EL BANKO kupon taslağı: '+item.title+' | Kod: '+item.code+' | İçerik: '+item.details;try{await navigator.clipboard.writeText(text);shareMsg.textContent='Kupon metni panoya kopyalandı; istediğin yerde paylaşabilirsin.'}catch{shareMsg.textContent=text}});
  document.getElementById('eb-payment-button').addEventListener('click',()=>{document.getElementById('eb-payment-check').textContent='Kontrol sonucu: Gerçek ödeme sağlayıcısı bağlantısı henüz kurulmadı. Ödeme alınmadı. Entegrasyon tamamlandığında bu bölüm güvenli ödeme sayfasına yönlendirecek.'});
  const ibanButton=document.getElementById('eb-iban-order-button');
