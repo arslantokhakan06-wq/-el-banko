@@ -5,6 +5,7 @@ const SITE_ORIGIN = process.env.SITE_ORIGIN || "https://el-banko.onrender.com";
 const PORT = process.env.PORT || 10000;
 const TJK_HOME = "https://www.tjk.org/TR/YarisSever/Info/Page/GunlukYarisProgrami";
 let cache = { until: 0, data: null };
+let refreshPromise = null;
 const db = process.env.DATABASE_URL ? new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false}}) : null;
 let dbReady = false;
 async function initMembers(){if(!db)return;await db.query("CREATE TABLE IF NOT EXISTS members (id BIGSERIAL PRIMARY KEY, full_name VARCHAR(100) NOT NULL, username VARCHAR(30) UNIQUE NOT NULL, email VARCHAR(254) UNIQUE NOT NULL, phone VARCHAR(25), password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), status VARCHAR(20) NOT NULL DEFAULT 'pending')");dbReady=true;console.log("EL BANKO member table ready");}
@@ -150,8 +151,15 @@ const server=http.createServer(async(req,res)=>{
   }
   if(url.pathname==="/api/races" && req.method==="GET"){
     if(cache.data && cache.until>Date.now()) return send(res,200,{...cache.data,cached:true});
-    try{const data=await getDailyRaces();cache={data,until:Date.now()+5*60*1000};return send(res,200,{...data,cached:false});}
-    catch(e){console.error("EL BANKO daily races failed",e.message);return send(res,502,{error:"Günlük yarış verisi şu anda resmî kaynaktan alınamadı.",detail:String(e.message||e),source:"EL BANKO",checkedAt:new Date().toISOString()});}
+    try{
+      if(!refreshPromise) refreshPromise=getDailyRaces();
+      const data=await refreshPromise;
+      cache={data,until:Date.now()+5*60*1000};
+      return send(res,200,{...data,cached:false});
+    }catch(e){
+      console.error("EL BANKO daily races failed",e.message);
+      return send(res,502,{error:"Günlük yarış verisi şu anda resmî kaynaktan alınamadı.",detail:String(e.message||e),source:"EL BANKO",checkedAt:new Date().toISOString()});
+    }finally{refreshPromise=null;}
   }
   return send(res,404,{error:"Bulunamadı"});
 });
