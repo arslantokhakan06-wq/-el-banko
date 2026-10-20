@@ -14,7 +14,11 @@ async function initMembers(){
  await db.query("CREATE TABLE IF NOT EXISTS member_sessions (token_hash CHAR(64) PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
  await db.query("CREATE TABLE IF NOT EXISTS member_wallets (member_id BIGINT PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE, balance BIGINT NOT NULL DEFAULT 0 CHECK(balance >= 0), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
  await db.query("CREATE TABLE IF NOT EXISTS wallet_transactions (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, amount BIGINT NOT NULL, balance_after BIGINT NOT NULL, kind VARCHAR(30) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'pending', reference VARCHAR(120), description VARCHAR(250) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(kind, reference))");
- await db.query("CREATE TABLE IF NOT EXISTS payment_orders (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, provider VARCHAR(20) NOT NULL, package_tokens BIGINT NOT NULL CHECK(package_tokens IN (200,500,1000,2500,5000)), amount_kurus BIGINT NOT NULL CHECK(amount_kurus > 0), status VARCHAR(20) NOT NULL DEFAULT 'pending', provider_reference VARCHAR(160), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), paid_at TIMESTAMPTZ)");
+ await db.query("CREATE TABLE IF NOT EXISTS payment_orders (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, provider VARCHAR(20) NOT NULL, package_tokens BIGINT NOT NULL CHECK(package_tokens IN (200,500,1000,2500,5000)), amount_kurus BIGINT NOT NULL CHECK(amount_kurus > 0), status VARCHAR(20) NOT NULL DEFAULT 'pending', provider_reference VARCHAR(160), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), paid_at TIMESTAMPTZ, payment_note VARCHAR(500), submitted_at TIMESTAMPTZ, reviewed_at TIMESTAMPTZ, reviewed_by VARCHAR(100))");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS payment_note VARCHAR(500)");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(100)");
  await db.query("CREATE TABLE IF NOT EXISTS coupon_drafts (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, title VARCHAR(120) NOT NULL, content TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
  await db.query("INSERT INTO member_wallets(member_id,balance) SELECT id,0 FROM members ON CONFLICT(member_id) DO NOTHING");
  await db.query("DELETE FROM member_sessions WHERE expires_at < NOW()");
@@ -266,6 +270,63 @@ const server=http.createServer(async(req,res)=>{
     if(!content||content.length>12000)return send(res,400,{error:"Kupon taslağı boş olamaz ve 12.000 karakteri aşamaz."});
     try{const r=await db.query("INSERT INTO coupon_drafts(member_id,title,content) VALUES($1,$2,$3) RETURNING id,title,content,created_at,updated_at",[m.id,title||"Kupon taslağı",content]);return send(res,201,{ok:true,draft:r.rows[0],message:"Kupon taslağı hesabınıza kaydedildi. Gerçek bahis gönderilmedi."});}
     catch(e){console.error("Coupon draft save failed",e.message);return send(res,500,{error:"Kupon taslağı kaydedilemedi."});}
+  }
+  if(url.pathname==="/api/payments/info" && req.method==="GET"){
+    const prices={};
+    for(const n of [200,500,1000,2500,5000]){const v=Number(process.env["TOKEN_PRICE_"+n+"_KURUS"]||0);prices[n]=Number.isSafeInteger(v)&&v>0?v:null;}
+    return send(res,200,{iban:process.env.ELBANKO_PAYMENT_IBAN||"",bank:process.env.ELBANKO_PAYMENT_BANK||"",accountHolder:process.env.ELBANKO_PAYMENT_HOLDER||"",prices,ready:Boolean(process.env.ELBANKO_PAYMENT_IBAN&&process.env.ELBANKO_PAYMENT_HOLDER&&[200,500,1000,2500,5000].every(n=>prices[n]))});
+  }
+  if(url.pathname==="/api/payments/orders" && req.method==="GET"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme taleplerini görmek için giriş yapın."});
+    try{const r=await db.query("SELECT id,package_tokens,amount_kurus,status,provider_reference,payment_note,created_at,submitted_at,reviewed_at FROM payment_orders WHERE member_id=$1 ORDER BY created_at DESC LIMIT 50",[m.id]);return send(res,200,{orders:r.rows});}
+    catch(e){console.error("Payment orders read failed",e.message);return send(res,500,{error:"Ödeme talepleri alınamadı."});}
+  }
+  if(url.pathname==="/api/payments/orders" && req.method==="POST"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Kontör siparişi için onaylı üye hesabınızla giriş yapın."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    const pkg=Number(b.packageTokens);
+    if(![200,500,1000,2500,5000].includes(pkg))return send(res,400,{error:"Kontör paketi geçersiz."});
+    const amount=Number(process.env["TOKEN_PRICE_"+pkg+"_KURUS"]||0);
+    if(!process.env.ELBANKO_PAYMENT_IBAN||!process.env.ELBANKO_PAYMENT_HOLDER||!Number.isSafeInteger(amount)||amount<=0)return send(res,503,{error:"Havale ile sipariş henüz açılamıyor. Yönetici Render ortamına alıcı IBAN'ını, hesap sahibini ve beş paketin TL fiyatlarını eklemeli. Ödeme alınmadı; kontör eklenmedi."});
+    try{const r=await db.query("INSERT INTO payment_orders(member_id,provider,package_tokens,amount_kurus,status) VALUES($1,'iban',$2,$3,'pending') RETURNING id,package_tokens,amount_kurus,status,created_at",[m.id,pkg,amount]);return send(res,201,{ok:true,order:r.rows[0],payment:{iban:process.env.ELBANKO_PAYMENT_IBAN,bank:process.env.ELBANKO_PAYMENT_BANK||"",accountHolder:process.env.ELBANKO_PAYMENT_HOLDER}});}
+    catch(e){console.error("Payment order create failed",e.message);return send(res,500,{error:"Kontör siparişi oluşturulamadı."});}
+  }
+  if(url.pathname==="/api/payments/orders/notify" && req.method==="POST"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme bildirimi için giriş yapın."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    const id=Number(b.orderId),note=String(b.note||"").trim().slice(0,500),reference=String(b.bankReference||"").trim().slice(0,160);
+    if(!Number.isSafeInteger(id)||id<=0)return send(res,400,{error:"Sipariş numarası geçersiz."});
+    try{const r=await db.query("UPDATE payment_orders SET status='reported',payment_note=$1,provider_reference=$2,submitted_at=NOW() WHERE id=$3 AND member_id=$4 AND status='pending' RETURNING id,status",[note,reference,id,m.id]);if(!r.rowCount)return send(res,409,{error:"Sipariş bulunamadı veya daha önce bildirilmiş/onaylanmış."});return send(res,200,{ok:true,order:r.rows[0],message:"Ödeme bildirimi alındı. Kontör, yönetici banka hareketini doğrulayana kadar yüklenmez."});}
+    catch(e){console.error("Payment notification failed",e.message);return send(res,500,{error:"Ödeme bildirimi kaydedilemedi."});}
+  }
+  if(url.pathname==="/api/admin/payment-orders" && req.method==="GET"){
+    const key=String(req.headers["x-admin-key"]||"");
+    if(!process.env.ELBANKO_ADMIN_KEY||!safeEqual(key,process.env.ELBANKO_ADMIN_KEY))return send(res,403,{error:"Yönetici yetkisi doğrulanamadı."});
+    try{const r=await db.query("SELECT o.id,o.member_id,m.full_name,m.username,m.email,o.package_tokens,o.amount_kurus,o.status,o.provider_reference,o.payment_note,o.created_at,o.submitted_at FROM payment_orders o JOIN members m ON m.id=o.member_id ORDER BY CASE WHEN o.status='reported' THEN 0 ELSE 1 END,o.created_at DESC LIMIT 100");return send(res,200,{orders:r.rows});}
+    catch(e){console.error("Admin payment orders failed",e.message);return send(res,500,{error:"Yönetici sipariş listesi alınamadı."});}
+  }
+  if(url.pathname==="/api/admin/payment-orders/approve" && req.method==="POST"){
+    const key=String(req.headers["x-admin-key"]||"");
+    if(!process.env.ELBANKO_ADMIN_KEY||!safeEqual(key,process.env.ELBANKO_ADMIN_KEY))return send(res,403,{error:"Yönetici yetkisi doğrulanamadı."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    const id=Number(b.orderId);
+    if(!Number.isSafeInteger(id)||id<=0)return send(res,400,{error:"Sipariş numarası geçersiz."});
+    const client=await db.connect();
+    try{
+      await client.query("BEGIN");
+      const r=await client.query("SELECT * FROM payment_orders WHERE id=$1 FOR UPDATE",[id]);
+      const o=r.rows[0];if(!o){await client.query("ROLLBACK");return send(res,404,{error:"Sipariş bulunamadı."});}
+      if(o.status!=="reported"){await client.query("ROLLBACK");return send(res,409,{error:"Yalnızca üyenin bildirdiği, henüz onaylanmamış sipariş onaylanabilir."});}
+      const w=await client.query("INSERT INTO member_wallets(member_id,balance) VALUES($1,0) ON CONFLICT(member_id) DO UPDATE SET member_id=EXCLUDED.member_id RETURNING balance",[o.member_id]);
+      const before=Number(w.rows[0].balance);
+      const upd=await client.query("UPDATE member_wallets SET balance=balance+$1,updated_at=NOW() WHERE member_id=$2 RETURNING balance",[o.package_tokens,o.member_id]);
+      const after=Number(upd.rows[0].balance);
+      await client.query("INSERT INTO wallet_transactions(member_id,amount,balance_after,kind,status,reference,description) VALUES($1,$2,$3,'iban_topup','approved',$4,$5)",[o.member_id,o.package_tokens,after,"iban-order-"+o.id,"IBAN ödeme onayı · Sipariş #"+o.id]);
+      await client.query("UPDATE payment_orders SET status='approved',paid_at=NOW(),reviewed_at=NOW(),reviewed_by='admin' WHERE id=$1",[id]);
+      await client.query("COMMIT");
+      return send(res,200,{ok:true,orderId:id,memberId:Number(o.member_id),tokensAdded:Number(o.package_tokens),balanceBefore:before,balanceAfter:after,message:"Onaylandı ve kontör bir kez yüklendi."});
+    }catch(e){await client.query("ROLLBACK").catch(()=>{});console.error("Admin payment approval failed",e.message);return send(res,500,{error:"Onay işlemi başarısız oldu; kontör yükleme tamamlanmadı."});}
+    finally{client.release();}
   }
   if(url.pathname==="/api/payments/create" && req.method==="POST"){
     const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme başlatmak için onaylı üye hesabıyla giriş yapın."});
