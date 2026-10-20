@@ -507,13 +507,13 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     </div>
     <div class="eb-wallet-card">
       <h3>🪙 Jeton Paketi Seç ve Satın Al</h3>
-      <p>Ücretsiz jeton verilmez. İstediğin sanal jeton paketini seç; fiyat ve güvenli ödeme bağlantısı etkinleştirildiğinde ödeme adımına geçebilirsin.</p>
+      <p>Önce ücretsiz üye ol. Başvurun yönetici tarafından onaylanınca jeton paketini seç, IBAN ile havale/EFT siparişi oluştur ve ödediğini bildir. Yönetici banka hareketini doğrulayıp onayladıktan sonra jetonlar hesabına eklenir.</p>
       <div class="eb-packages">
-        <div class="eb-package"><div><strong>Başlangıç</strong><small>200 jeton · fiyat henüz ayarlanmadı</small></div><button type="button" data-token-package="start" data-label="Başlangıç · 200 jeton">Paketi seç</button></div>
-        <div class="eb-package"><div><strong>Standart</strong><small>500 jeton · fiyat henüz ayarlanmadı</small></div><button type="button" data-token-package="standard" data-label="Standart · 500 jeton">Paketi seç</button></div>
-        <div class="eb-package"><div><strong>Premium</strong><small>1.000 jeton · fiyat henüz ayarlanmadı</small></div><button type="button" data-token-package="premium" data-label="Premium · 1.000 jeton">Paketi seç</button></div>
-        <div class="eb-package"><div><strong>Pro</strong><small>2.500 jeton · fiyat henüz ayarlanmadı</small></div><button type="button" data-token-package="pro" data-label="Pro · 2.500 jeton">Paketi seç</button></div>
-        <div class="eb-package"><div><strong>Ultimate</strong><small>5.000 jeton · fiyat henüz ayarlanmadı</small></div><button type="button" data-token-package="ultimate" data-label="Ultimate · 5.000 jeton">Paketi seç</button></div>
+        <div class="eb-package"><div><strong>Başlangıç</strong><small>200 jeton · 250 TL</small></div><button type="button" data-token-package="start" data-label="Başlangıç · 200 jeton">Paketi seç</button></div>
+        <div class="eb-package"><div><strong>Standart</strong><small>500 jeton · 750 TL</small></div><button type="button" data-token-package="standard" data-label="Standart · 500 jeton">Paketi seç</button></div>
+        <div class="eb-package"><div><strong>Premium</strong><small>1.000 jeton · 1.250 TL</small></div><button type="button" data-token-package="premium" data-label="Premium · 1.000 jeton">Paketi seç</button></div>
+        <div class="eb-package"><div><strong>Pro</strong><small>2.500 jeton · 3.250 TL</small></div><button type="button" data-token-package="pro" data-label="Pro · 2.500 jeton">Paketi seç</button></div>
+        <div class="eb-package"><div><strong>Ultimate</strong><small>5.000 jeton · 3.750 TL</small></div><button type="button" data-token-package="ultimate" data-label="Ultimate · 5.000 jeton">Paketi seç</button></div>
       </div>
       <div class="eb-message" id="eb-selected-package" role="status" aria-live="polite">Seçilen paket: Henüz paket seçilmedi.</div>
       <button type="button" class="eb-action" id="eb-buy-package" disabled>Paketi Al · Ödeme Yap</button>
@@ -521,7 +521,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     </div>
     <div class="eb-wallet-card">
       <h3>🎟️ Kupon Atölyesi</h3>
-      <p>Yarış programında işaretlediğin atları tek dokunuşla aktar; kuponunu düzenle ve bu cihazda taslak olarak sakla.</p>
+      <p>Yarış programında işaretlediğin atları kupon taslağına aktar. Taslak hesabına kaydedilebilir; bu işlem resmî bahis/kupon göndermez.</p>
       <button type="button" class="eb-action secondary" id="eb-import-sixfold">↳ Altılı seçimlerimi aktar</button>
       <form class="eb-wallet-form" id="eb-coupon-form" style="margin-top:10px">
         <label for="eb-coupon-title">Kupon başlığı<input id="eb-coupon-title" maxlength="70" required placeholder="Örn. Adana günün kuponu"></label>
@@ -541,7 +541,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   </div>
   <div class="eb-wallet-card" id="eb-iban-payment" style="margin-top:12px">
     <h3>🏦 IBAN ile Havale / EFT</h3>
-    <p>Kontör paketi siparişi oluşturun, banka transferini kendiniz yapın ve yöneticiye bildirin. Yönetici gerçek banka hareketini doğrulamadan kontör eklenmez.</p>
+    <p>Üye hesabın onaylandıktan sonra paket siparişi oluştur, bankandan havale/EFT yap ve ödemeyi bildir. Yönetici gerçek banka hareketini kontrol edip onayladıktan sonra jeton hesabına yüklenir. Bu adım gerçek bahis göndermez.</p>
     <div class="eb-message" id="eb-iban-details">Banka bilgileri yükleniyor. IBAN ve paket fiyatları yönetici tarafından eklenmeden para göndermeyin.</div>
     <label for="eb-iban-package">Kontör paketi
       <select id="eb-iban-package">
@@ -562,8 +562,8 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     <div class="eb-message" id="eb-member-orders" role="status" aria-live="polite">Sipariş geçmişini görmek için üye hesabınıza giriş yapın.</div>
   </div>
   <div class="eb-wallet-card" id="eb-admin-payment-panel" style="margin-top:12px">
-    <h3>🔐 Yönetici · IBAN ödeme onayları</h3>
-    <p>Bu alan yalnızca Render ortamına kaydedilmiş yönetici anahtarıyla çalışır. Anahtarı üyelerle paylaşmayın.</p>
+    <h3>🔐 Yönetici · IBAN kontrolü ve jeton onayı</h3>
+    <p>Yönetici, bildirilen siparişi gerçek banka hesabındaki hareketle karşılaştırır. Tutar ve sipariş eşleşiyorsa onaylar; sistem jetonları hesaba ekler. Bankada görülmeyen ödemeyi onaylamayın. Yönetici anahtarını üyelerle paylaşmayın.</p>
     <label for="eb-admin-key">Yönetici anahtarı<input id="eb-admin-key" type="password" autocomplete="off" placeholder="Render'daki ELBANKO_ADMIN_KEY (veya mevcut ADMIN_PASSWORD)"></label>
     <button type="button" class="eb-action secondary" id="eb-admin-load-orders">Ödeme bildirimlerini getir</button>
     <div id="eb-admin-orders" class="eb-coupon-list" aria-live="polite"></div>
@@ -571,7 +571,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   </div>
   <div class="eb-wallet-card" style="margin-top:12px">
     <h3>💳 Ödeme Yap</h3>
-    <p>Gerçek ödeme kapalıdır. PayTR ve iyzico koşullarında bahis/kumar içerikli siteler kısıtlıdır. EL BANKO’nun mevcut yarış ve kupon özellikleri için sağlayıcıdan yazılı uygunluk alınmadan entegrasyon etkinleştirilmeyecektir.</p>
+    <p>Bu sitede gerçek bahis oynatma veya resmî kupon yatırma bağlantısı yoktur. Kupon bölümü seçim ve taslak hazırlamak içindir. Kartla ödeme, sağlayıcının yazılı uygunluğu ve güvenli entegrasyon tamamlanmadan etkinleştirilmez.</p>
     <button type="button" class="eb-action secondary" id="eb-payment-button">Ödeme bağlantı durumunu kontrol et</button>
     <div class="eb-message" id="eb-payment-check" role="status" aria-live="polite">Durum: Ödeme altyapısı bağlanmamış ve sağlayıcı uygunluğu doğrulanmamış. Bu panel para tahsil etmez ve ödeme yapılmış gibi göstermez.</div>
   </div>
@@ -680,10 +680,15 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
    if(ibanSelect)ibanSelect.selectedIndex=[...ibanSelect.options].findIndex(o=>o.text===selectedPackage.label);
  }));
  buyPackageButton.addEventListener('click',()=>{
-   if(!selectedPackage){document.getElementById('eb-payment-message').textContent='Önce bir kontör paketi seçin.';return;}
+   if(!selectedPackage){document.getElementById('eb-payment-message').textContent='Önce bir jeton paketi seçin.';return;}
    const packageTokens={start:200,standard:500,premium:1000,pro:2500,ultimate:5000}[selectedPackage.id];
    document.getElementById('eb-iban-package').value=String(packageTokens);
-   document.getElementById('eb-payment-message').textContent='Paket seçiminiz IBAN ile ödeme bölümüne aktarıldı. Sipariş oluşturmak için giriş yapmanız ve yönetici tarafından tanımlanmış fiyatları kullanmanız gerekir.';
+   if(!getToken()){
+     document.getElementById('eb-payment-message').textContent='Önce aşağıdaki “Ücretsiz Üye Ol” formunu doldurun. Yönetici başvurunuzu onayladıktan sonra giriş yapıp sipariş oluşturabilirsiniz.';
+     document.getElementById('uye-ol').scrollIntoView({behavior:'smooth',block:'center'});
+     return;
+   }
+   document.getElementById('eb-payment-message').textContent='Paket seçildi. IBAN siparişi oluşturma bölümüne geçiyorsunuz. Sipariş için üyelik onayı gerekir; banka ödemesi doğrulanmadan jeton yüklenmez.';
    document.getElementById('eb-iban-payment').scrollIntoView({behavior:'smooth',block:'center'});
  });
  document.getElementById('eb-import-sixfold').addEventListener('click',()=>{
@@ -716,8 +721,8 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 
 <section class="member-area" id="uye-ol">
   <div class="eyebrow"><span class="dot"></span> EL BANKO ÜYELİK</div>
-  <h2>Ücretsiz Üye Ol</h2>
-  <p class="member-intro">Ad-soyad, kullanıcı adı, e-posta ve şifrenizi girerek üyelik formunu doldurun.</p>
+  <h2>1. Ücretsiz Üye Ol</h2>
+  <p class="member-intro">Ad-soyad, kullanıcı adı, e-posta ve şifrenizi girin. Yönetici üyelik başvurunuzu onayladıktan sonra giriş yapıp jeton paketi siparişi oluşturabilirsiniz.</p>
   <form id="eb-member-form" autocomplete="on">
     <div class="member-grid">
       <div class="member-field"><label for="eb-member-name">Ad soyad *</label><input id="eb-member-name" name="name" autocomplete="name" maxlength="100" required placeholder="Adınız ve soyadınız"></div>
