@@ -556,6 +556,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     <div id="eb-iban-order-result" hidden>
       <div class="eb-message" id="eb-iban-order-message" role="status" aria-live="polite"></div>
       <label for="eb-bank-reference">Banka işlem / dekont referansı (isteğe bağlı)<input id="eb-bank-reference" maxlength="160" placeholder="Banka işlem numarası"></label>
+      <label for="eb-member-payment-name">Üye Ad Soyad<input id="eb-member-payment-name" readonly placeholder="Üye hesabınızla giriş yapın"></label>
       <label for="eb-sender-name">Gönderen Ad Soyad<input id="eb-sender-name" maxlength="120" autocomplete="name" placeholder="Havale yapan kişinin adı soyadı" required></label>
       <label for="eb-sender-bank">Gönderen Banka Adı<input id="eb-sender-bank" maxlength="120" placeholder="Ödeme yapılan bankanın adı" required></label>
       <label for="eb-sender-iban">Gönderen IBAN<input id="eb-sender-iban" maxlength="34" autocomplete="off" placeholder="TR ile başlayan 26 karakterli IBAN" required></label>
@@ -614,7 +615,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
  async function loadMemberOrders(){
    const el=document.getElementById('eb-member-orders');if(!getToken()){el.textContent='Sipariş geçmişini görmek için üye girişi yapın.';return}
    try{const data=await api('/api/payments/orders');el.replaceChildren();if(!data.orders.length){el.textContent='Henüz kontör siparişi yok.';return}
-    data.orders.forEach(o=>{const row=document.createElement('div');row.className='eb-coupon';const title=document.createElement('strong');title.textContent='Sipariş #'+o.id+' · '+Number(o.package_tokens).toLocaleString('tr-TR')+' kontör';const detail=document.createElement('small');detail.textContent=(o.amount_kurus/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'})+' · Durum: '+o.status+' · '+new Date(o.created_at).toLocaleString('tr-TR');row.append(title,detail);el.append(row)})
+    data.orders.forEach(o=>{const row=document.createElement('div');row.className='eb-coupon';const title=document.createElement('strong');title.textContent='Sipariş #'+o.id+' · '+Number(o.package_tokens).toLocaleString('tr-TR')+' kontör';const detail=document.createElement('small');detail.textContent='Üye Ad Soyad: '+(o.full_name||'—')+' · Sipariş tutarı: '+(o.amount_kurus/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'})+' · Gönderen Ad Soyad: '+(o.sender_name||'bildirilmedi')+' · Banka: '+(o.sender_bank||'bildirilmedi')+' · IBAN: '+(o.sender_iban||'bildirilmedi')+' · Bildirilen tutar: '+(o.reported_amount_kurus==null?'bildirilmedi':(o.reported_amount_kurus/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'}))+' · Durum: '+o.status+' · '+new Date(o.created_at).toLocaleString('tr-TR');row.append(title,detail);el.append(row)})
    }catch(e){el.textContent=e.message}
  }
  document.getElementById('eb-iban-order-button').addEventListener('click',async()=>{
@@ -653,6 +654,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
    try{
      const account=await api('/api/account');accountControls.hidden=false;
      document.getElementById('eb-account-name').textContent=account.member.name+' · '+account.member.username+' · Bakiye: '+account.wallet.balance.toLocaleString('tr-TR')+' kontör';
+     const paymentName=document.getElementById('eb-member-payment-name');if(paymentName)paymentName.value=account.member.name||'';
      balanceEl.textContent=String(account.wallet.balance);
      tokenMsg.textContent='Sunucudaki doğrulanmış hesap bakiyesi gösteriliyor. Kontör yalnızca doğrulanmış ödeme sonrasında eklenir.';
      const hist=await api('/api/account/transactions');transactionHistory.replaceChildren();
