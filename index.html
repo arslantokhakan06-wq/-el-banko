@@ -213,7 +213,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   <div id="eb-sixfold-legs" class="race-empty" aria-live="polite">Güncel yarış verisi bekleniyor…</div>
   <div class="race-actions">
     <button type="button" id="eb-sixfold-copy">Altılı taslağını kopyala</button>
-    <a class="race-link" href="https://www.tjk.org/TR/YarisSever/Info/Page/GunlukYarisProgrami" target="_blank" rel="noopener noreferrer">TJK resmî programı ↗</a>
+    <span class="race-meta">Program EL BANKO içinde görüntülenir; dış siteye yönlendirme yapılmaz.</span>
   </div>
   <div id="eb-sixfold-message" class="race-status" role="status" aria-live="polite">Program, TJK veri bağlantısı yanıt verdiğinde gösterilir. At numarası seçimlerin kullanıcı tarafından girilir.</div>
   <p class="race-meta">Bilgilendirme amaçlıdır. Tahmin veya kazanç garantisi değildir. Gerçek para yatırma ya da bahis işlemi yapılmaz.</p>
@@ -260,7 +260,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     }catch(e){
       courseSelect.replaceChildren(new Option('Program şu an alınamıyor',''));
       startSelect.replaceChildren(new Option('Program şu an alınamıyor',''));
-      legsEl.className='race-empty';legsEl.textContent='Altılı programı şu anda yüklenemedi. Biraz sonra yeniden deneyin veya TJK resmî programını açın.';
+      legsEl.className='race-empty';legsEl.textContent='Altılı programı şu anda yüklenemedi. Biraz sonra yeniden deneyin.';
       message.textContent='Gerçek yarış verisi gelmediği için program uydurularak gösterilmedi.';
     }
   }
