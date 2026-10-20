@@ -574,6 +574,18 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     <div id="eb-admin-orders" class="eb-coupon-list" aria-live="polite"></div>
     <div id="eb-admin-message" class="eb-message" role="status" aria-live="polite">Onay yalnızca banka hesabına gelen gerçek ödeme kontrol edildikten sonra verilmelidir.</div>
   </div>
+  <div class="eb-wallet-card" id="eb-admin-members-panel" style="margin-top:12px">
+    <h3>👥 Yönetici · Üye başvuruları</h3>
+    <p>Üyelik başvurularını görmek ve hesap durumunu değiştirmek için yönetici şifresiyle giriş yapın. Bu alan yalnızca yetkili yönetici oturumuyla çalışır.</p>
+    <label for="eb-admin-login-password">Yönetici şifresi<input id="eb-admin-login-password" type="password" autocomplete="current-password" maxlength="200" placeholder="Yönetici şifresi"></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button type="button" class="eb-action" id="eb-admin-login">Yönetici girişi</button>
+      <button type="button" class="eb-action secondary" id="eb-admin-refresh-members">Üyeleri yenile</button>
+      <button type="button" class="eb-action secondary" id="eb-admin-logout">Çıkış</button>
+    </div>
+    <div id="eb-admin-members-message" class="eb-message" role="status" aria-live="polite">Üye listesi yalnızca yönetici girişi yaptıktan sonra açılır.</div>
+    <div id="eb-admin-members-list" class="eb-coupon-list" aria-live="polite"></div>
+  </div>
   <div class="eb-wallet-card" style="margin-top:12px">
     <h3>💳 Ödeme Yap</h3>
     <p>Bu sitede gerçek bahis oynatma veya resmî kupon yatırma bağlantısı yoktur. Kupon bölümü seçim ve taslak hazırlamak içindir. Kartla ödeme, sağlayıcının yazılı uygunluğu ve güvenli entegrasyon tamamlanmadan etkinleştirilmez.</p>
@@ -581,6 +593,64 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     <div class="eb-message" id="eb-payment-check" role="status" aria-live="polite">Durum: Ödeme altyapısı bağlanmamış ve sağlayıcı uygunluğu doğrulanmamış. Bu panel para tahsil etmez ve ödeme yapılmış gibi göstermez.</div>
   </div>
 </section>
+<script>
+(function(){
+ const API='https://el-banko-race-api.onrender.com';
+ const tokenKey='elbanko_admin_session_token';
+ const password=document.getElementById('eb-admin-login-password');
+ const login=document.getElementById('eb-admin-login');
+ const refresh=document.getElementById('eb-admin-refresh-members');
+ const logout=document.getElementById('eb-admin-logout');
+ const message=document.getElementById('eb-admin-members-message');
+ const list=document.getElementById('eb-admin-members-list');
+ if(!password||!login||!refresh||!logout||!message||!list)return;
+ function token(){try{return sessionStorage.getItem(tokenKey)||''}catch{return ''}}
+ function setToken(value){try{if(value)sessionStorage.setItem(tokenKey,value);else sessionStorage.removeItem(tokenKey)}catch{}}
+ async function request(path,options={}){
+   const headers={'Accept':'application/json','Content-Type':'application/json',...(options.headers||{})};
+   if(token())headers.Authorization='Bearer '+token();
+   const response=await fetch(API+path,{...options,headers});
+   const data=await response.json().catch(()=>({error:'Sunucu yanıtı okunamadı.'}));
+   if(!response.ok)throw new Error(data.error||'İşlem tamamlanamadı.');
+   return data;
+ }
+ async function loadMembers(){
+   if(!token()){message.textContent='Önce yönetici girişi yapın.';return}
+   message.textContent='Üyeler yükleniyor…';list.replaceChildren();
+   try{
+     const data=await request('/api/admin/members');
+     if(!data.members.length){message.textContent='Henüz üyelik başvurusu yok.';return}
+     data.members.forEach(member=>{
+       const row=document.createElement('div');row.className='eb-coupon';
+       const title=document.createElement('strong');title.textContent='#'+member.id+' · '+member.full_name+' ('+member.username+')';
+       const detail=document.createElement('small');detail.textContent=(member.email||'E-posta yok')+' · '+(member.phone||'Telefon yok')+' · Kayıt: '+new Date(member.created_at).toLocaleString('tr-TR')+' · Durum: '+member.status;
+       const controls=document.createElement('div');controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px';
+       const select=document.createElement('select');select.setAttribute('aria-label','Üye durumu');select.style.cssText='max-width:190px;padding:10px;border-radius:8px;background:#090a0d;color:#fff;border:1px solid #51472e';
+       [['pending','Beklemede'],['approved','Onaylandı'],['rejected','Reddedildi'],['suspended','Askıya alındı']].forEach(([value,label])=>{const opt=document.createElement('option');opt.value=value;opt.textContent=label;opt.selected=member.status===value;select.append(opt)});
+       const save=document.createElement('button');save.type='button';save.className='eb-action secondary';save.textContent='Durumu kaydet';
+       save.addEventListener('click',async()=>{
+         save.disabled=true;message.textContent='#'+member.id+' güncelleniyor…';
+         try{const result=await request('/api/admin/members/'+encodeURIComponent(member.id)+'/status',{method:'POST',body:JSON.stringify({status:select.value})});detail.textContent=(member.email||'E-posta yok')+' · '+(member.phone||'Telefon yok')+' · Durum: '+result.member.status;message.textContent='Üye #'+member.id+' durumu güncellendi.';save.textContent='Kaydedildi'}
+         catch(error){message.textContent=error.message;save.disabled=false}
+       });
+       controls.append(select,save);row.append(title,detail,controls);list.append(row);
+     });
+     message.textContent=data.members.length+' üye/başvuru listelendi.';
+   }catch(error){message.textContent=error.message;if(/oturum|süresi dolmuş|geçersiz/i.test(error.message))setToken('')}
+ }
+ login.addEventListener('click',async()=>{
+   if(!password.value){message.textContent='Yönetici şifresini girin.';password.focus();return}
+   login.disabled=true;message.textContent='Giriş kontrol ediliyor…';
+   try{const data=await request('/api/admin/login',{method:'POST',body:JSON.stringify({password:password.value})});setToken(data.token);password.value='';message.textContent='Yönetici girişi başarılı.';await loadMembers()}
+   catch(error){message.textContent=error.message;setToken('')}
+   finally{login.disabled=false}
+ });
+ refresh.addEventListener('click',loadMembers);
+ logout.addEventListener('click',async()=>{try{if(token())await request('/api/admin/logout',{method:'POST',body:'{}'})}catch{}setToken('');list.replaceChildren();message.textContent='Yönetici oturumundan çıkış yapıldı.'});
+ if(token())loadMembers();
+})();
+</script>
+
 <script>
 (function(){
  const KEY='elbanko_demo_wallet_v1';
