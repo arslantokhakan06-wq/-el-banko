@@ -65,6 +65,25 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .race-actions button:disabled{opacity:.55;cursor:wait}
 .race-meta{color:var(--muted);font-size:12px;margin:8px 0}
 .race-course{border:1px solid #343239;border-radius:12px;background:#14151a;padding:14px;margin:12px 0}
+/* Keep daily race data compact on desktop and mobile */
+.race-data{margin:14px 0 0;padding:12px;border-radius:14px;box-shadow:none}
+.race-data h2{font-size:20px;margin-bottom:5px}
+.race-compact-intro{font-size:12px!important;margin-bottom:8px!important}
+.race-data .race-status{margin:8px 0;padding:9px;font-size:11px}
+.race-data .race-actions{margin:7px 0}
+.race-course.race-course-compact{padding:0;margin:6px 0;border-radius:10px}
+.race-course-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;cursor:pointer;list-style:none}
+.race-course-summary::-webkit-details-marker{display:none}
+.race-course-summary strong{font-size:13px;color:var(--gold-light)}
+.race-course-summary small{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+.race-course-chevron{font-size:14px;color:var(--gold-light)}
+.race-course-body{padding:0 8px 8px}
+.race-mini{margin:5px 0;border:1px solid #2d2d33;border-radius:8px;background:#101115}
+.race-mini summary{padding:8px 10px;font-size:12px}
+.race-mini-body{padding:0 8px 8px}
+.race-mini .race-table-wrap table{min-width:0;font-size:11px}
+.race-mini .race-table-wrap th,.race-mini .race-table-wrap td{padding:5px 7px}
+
 .race-course h3{font-size:17px;margin:0 0 8px;color:var(--gold-light)}
 .race-table-wrap{overflow-x:auto;max-width:100%;border-radius:8px}
 .race-table-wrap table{width:100%;border-collapse:collapse;min-width:480px;font-size:12px}
@@ -406,7 +425,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
           : '<div class="race-empty">Bu koşunun at listesi henüz alınamadı.</div>';
         return '<details class="race-mini"><summary><span><b>'+safeText(r.number)+'. Koşu</b><small>'+safeText(r.time||'Saat belirtilmedi')+'</small></span><span class="race-mini-count">'+rh.length+' at　⌄</span></summary><div class="race-mini-body">'+(r.title?'<p>'+safeText(r.title)+'</p>':'')+horseRows+'</div></details>';
       }).join('');
-      return '<details class="race-course race-course-compact" '+(idx===0?'open':'')+'><summary class="race-course-summary"><span><strong>'+safeText(course.course||'Hipodrom')+'</strong><small>'+races.length+' koşu · '+(Number(course.horseCount)||horses.length)+' at</small></span><span class="race-course-chevron">⌄</span></summary><div class="race-course-body">'+(raceRows||'<div class="race-empty">Koşu bilgisi bulunamadı.</div>')+'</div></details>';
+      return '<details class="race-course race-course-compact"><summary class="race-course-summary"><span><strong>'+safeText(course.course||'Hipodrom')+'</strong><small>'+races.length+' koşu · '+(Number(course.horseCount)||horses.length)+' at</small></span><span class="race-course-chevron">⌄</span></summary><div class="race-course-body">'+(raceRows||'<div class="race-empty">Koşu bilgisi bulunamadı.</div>')+'</div></details>';
     }).join('');
     raceResults.className='race-results race-results-compact';
     raceResults.innerHTML=cards;
