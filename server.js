@@ -71,7 +71,7 @@ async function getDailyRaces(){
   while((m=aRe.exec(home))){
     const href=(m[1].match(/href\s*=\s*["']([^"']+)["']/i)||[])[1];
     const label=cleanText(m[2]);
-    if(!href || !label || !/\\/TR\\/YarisSever\\/Info\\/Sehir\\/GunlukYarisProgrami/i.test(decodeURIComponent(href))) continue;
+    if(!href || !label || !decodeURIComponent(href).toLowerCase().includes("/tr/yarissever/info/sehir/gunlukyarisprogrami")) continue;
     const url=new URL(href,TJK_HOME).toString();
     if(!links.some(x=>x.url===url)) links.push({label,url});
   }
