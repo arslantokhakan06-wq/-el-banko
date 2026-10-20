@@ -244,18 +244,17 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   }
   function renderLegs(){
     const c=currentCourse();const races=c&&Array.isArray(c.races)?c.races:[];
-    const start=Number(startSelect.value);const selected=[];
-    for(let n=0;n<6;n++){const r=races.find(x=>Number(x.number)===start+n);if(r)selected.push(r);}
-    if(!selected.length){legsEl.className='race-empty';legsEl.textContent='Hipodrom ve altılı başlangıç koşusu seçildiğinde altı ayağın programı burada görünür.';horseSuggestions.className='race-empty';horseSuggestions.textContent='At seçenekleri için önce günlük programı yükleyin.';return;}
-    legsEl.className='race-results';
-    legsEl.innerHTML='<table><thead><tr><th>Ayak</th><th>Koşu</th><th>Saat</th><th>Koşu bilgisi</th><th>At numaralarını girin</th></tr></thead><tbody>'+Array.from({length:6},(_,i)=>{
-      const r=selected[i];
-      return '<tr><td><strong>'+(i+1)+'. ayak</strong></td><td>'+(r?esc(r.number)+'. koşu':'—')+'</td><td>'+(r?esc(r.time||'Belirtilmedi'):'—')+'</td><td>'+(r?esc(r.title||'Koşu ayrıntısı kaynakta yok'):'Bu hipodromda sonraki koşu bulunamadı')+'</td><td><input aria-label="'+(i+1)+'. ayak at numaraları" data-leg="'+i+'" placeholder="Örn. 2, 4, 7" style="width:130px;max-width:100%;padding:8px;background:#0b0c0f;color:#fff;border:1px solid #3c3a40;border-radius:7px"></td></tr>';
-    }).join('')+'</tbody></table>';
+    const start=Number(startSelect.value);const selected=Array.from({length:6},(_,n)=>races.find(x=>Number(x.number)===start+n)||null);
+    if(!start||!selected.some(Boolean)){legsEl.className='race-empty';legsEl.textContent='Hipodrom ve altılı başlangıç koşusunu seçin; ardından her ayak için atları işaretleyin.';horseSuggestions.className='race-empty';horseSuggestions.textContent='Canlı at seçenekleri program verisi geldikten sonra burada gösterilir.';return;}
     const horses=Array.isArray(c.horses)?c.horses:[];
+    legsEl.className='race-results';
+    legsEl.innerHTML='<div class="race-meta">Her ayakta bir veya daha fazla at seçin. Altı ayak tamamlanınca kupon taslağı oluşturabilirsiniz.</div><table><thead><tr><th>Ayak</th><th>Koşu</th><th>Saat</th><th>At seçimi</th></tr></thead><tbody>'+selected.map((r,i)=>{
+      const options=horses.length?'<div style="display:flex;flex-wrap:wrap;gap:8px">'+horses.map((h,j)=>'<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid #514523;border-radius:8px"><input type="checkbox" data-leg="'+i+'" data-horse="'+esc(h.number||h.name||j+1)+'" style="accent-color:#d4af37"><span>'+esc(h.number?h.number+'. ':'')+esc(h.name||('At '+(j+1)))+'</span></label>').join('')+'</div>':'<label>At numaraları (virgülle ayırın)<input aria-label="'+(i+1)+'. ayak at numaraları" data-leg-input="'+i+'" placeholder="Örn. 2, 4, 7" style="display:block;width:100%;margin-top:6px;padding:8px;background:#0b0c0f;color:#fff;border:1px solid #3c3a40;border-radius:7px"></label>';
+      return '<tr><td><strong>'+(i+1)+'. ayak</strong></td><td>'+(r?esc(r.number)+'. koşu':'—')+'</td><td>'+(r?esc(r.time||'Belirtilmedi'):'—')+'</td><td>'+(r?options:'Bu hipodromda bu ayak için koşu bulunamadı')+'</td></tr>';
+    }).join('')+'</tbody></table>';
     horseSuggestions.className='race-empty';
-    horseSuggestions.textContent=horses.length?'Bugünkü programdan alınan at listesi: '+horses.slice(0,50).map(h=>(h.number?h.number+'. ':'')+h.name).join(' · ')+(horses.length>50?' …':''):'At isimleri kaynak tarafından sağlanmadı; numaraları elle girebilirsiniz.';
-    message.textContent='Kaynak: TJK günlük programı. Program 5 dakikada bir yenilenir. Son veri: '+(c.updatedAt?new Date(c.updatedAt).toLocaleString('tr-TR'):'şimdi')+'.';
+    horseSuggestions.textContent=horses.length?'Atları her ayağın altında işaretleyin; seçiminiz kupon taslağına aktarılır.':'Canlı at isimleri şu anda veri akışında yok. Sistem at uydurmaz; geçici olarak numaraları elle girebilirsiniz.';
+    message.textContent='EL BANKO yarış programı güncellendi. Son veri: '+(c.updatedAt?new Date(c.updatedAt).toLocaleString('tr-TR'):'şimdi')+'.';
   }
   async function load(){
     refreshButton.disabled=true;refreshButton.textContent='Veri yenileniyor…';
@@ -280,8 +279,8 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   refreshButton.addEventListener('click',load);
   copyButton.addEventListener('click',async()=>{
     const c=currentCourse();const start=Number(startSelect.value);
-    const lines=['EL BANKO · Kupon taslağı','Hipodrom: '+(c?c.course:'Belirtilmedi'),'Başlangıç koşusu: '+(start||'Belirtilmedi'),'Veri kaynağı: TJK günlük programı'];
-    for(let i=0;i<6;i++){const input=legsEl.querySelector('[data-leg="'+i+'"]');lines.push((i+1)+'. ayak: '+(input&&input.value.trim()?input.value.trim():'Seçim girilmedi'));}
+    const lines=['EL BANKO · 6 ayak kupon taslağı','Hipodrom: '+(c?c.course:'Belirtilmedi'),'Başlangıç koşusu: '+(start||'Belirtilmedi')];
+    for(let i=0;i<6;i++){const chosen=Array.from(legsEl.querySelectorAll('input[data-leg="'+i+'"]:checked')).map(x=>x.getAttribute('data-horse'));const input=legsEl.querySelector('[data-leg-input="'+i+'"]');const value=chosen.length?chosen.join(', '):(input&&input.value.trim()?input.value.trim():'Seçim girilmedi');lines.push((i+1)+'. ayak: '+value);}
     const draft=lines.join('\n');
     try{await navigator.clipboard.writeText(draft);message.textContent='Kupon taslağı hazırlandı ve kopyalandı. Bu yalnızca taslaktır; bahis gönderilmedi.';}
     catch(e){message.textContent=draft;}
@@ -388,7 +387,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
       return '<article class="race-course"><h3>'+safeText(course.course)+'</h3>'+raceList+horseTable+'</article>';
     }).join('');
     raceResults.className='race-results';
-    raceResults.innerHTML='<div class="race-meta">'+safeText(data.source)+' · '+safeText(data.notice||'')+'</div>'+cards;
+    raceResults.innerHTML='<div class="race-meta">EL BANKO · Güncel yarış verileri</div>'+cards;
     raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri durumu:</b> Resmî TJK programı alındı. '+courses.length+' hipodrom · '+total+' at kaydı.</span>';
     raceUpdated.textContent='Son güncelleme: '+new Date(data.fetchedAt).toLocaleString('tr-TR');
   }
