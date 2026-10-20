@@ -211,8 +211,10 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     </label>
   </div>
   <div id="eb-sixfold-legs" class="race-empty" aria-live="polite">Güncel yarış verisi bekleniyor…</div>
+  <div id="eb-horse-suggestions" class="race-empty" style="margin-top:10px" aria-live="polite">Günlük programdaki at seçenekleri burada gösterilecek.</div>
   <div class="race-actions">
-    <button type="button" id="eb-sixfold-copy">Altılı taslağını kopyala</button>
+    <button type="button" id="eb-sixfold-copy">Seçimlerimden kupon taslağı oluştur</button>
+    <button type="button" id="eb-sixfold-refresh">Anlık veriyi yenile</button>
     <span class="race-meta">Program EL BANKO içinde görüntülenir; dış siteye yönlendirme yapılmaz.</span>
   </div>
   <div id="eb-sixfold-message" class="race-status" role="status" aria-live="polite">Program, TJK veri bağlantısı yanıt verdiğinde gösterilir. At numarası seçimlerin kullanıcı tarafından girilir.</div>
@@ -227,6 +229,8 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   const legsEl=document.getElementById('eb-sixfold-legs');
   const message=document.getElementById('eb-sixfold-message');
   const copyButton=document.getElementById('eb-sixfold-copy');
+  const refreshButton=document.getElementById('eb-sixfold-refresh');
+  const horseSuggestions=document.getElementById('eb-horse-suggestions');
   let courses=[];
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
   function currentCourse(){return courses[Number(courseSelect.value)]||null;}
@@ -240,15 +244,19 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     const c=currentCourse();const races=c&&Array.isArray(c.races)?c.races:[];
     const start=Number(startSelect.value);const selected=[];
     for(let n=0;n<6;n++){const r=races.find(x=>Number(x.number)===start+n);if(r)selected.push(r);}
-    if(!selected.length){legsEl.className='race-empty';legsEl.textContent='Hipodrom ve altılı başlangıç koşusu seçildiğinde altı ayağın programı burada görünür.';return;}
+    if(!selected.length){legsEl.className='race-empty';legsEl.textContent='Hipodrom ve altılı başlangıç koşusu seçildiğinde altı ayağın programı burada görünür.';horseSuggestions.className='race-empty';horseSuggestions.textContent='At seçenekleri için önce günlük programı yükleyin.';return;}
     legsEl.className='race-results';
-    legsEl.innerHTML='<table><thead><tr><th>Ayak</th><th>Koşu</th><th>Saat</th><th>Koşu bilgisi</th><th>At numaraların</th></tr></thead><tbody>'+Array.from({length:6},(_,i)=>{
+    legsEl.innerHTML='<table><thead><tr><th>Ayak</th><th>Koşu</th><th>Saat</th><th>Koşu bilgisi</th><th>At numaralarını girin</th></tr></thead><tbody>'+Array.from({length:6},(_,i)=>{
       const r=selected[i];
       return '<tr><td><strong>'+(i+1)+'. ayak</strong></td><td>'+(r?esc(r.number)+'. koşu':'—')+'</td><td>'+(r?esc(r.time||'Belirtilmedi'):'—')+'</td><td>'+(r?esc(r.title||'Koşu ayrıntısı kaynakta yok'):'Bu hipodromda sonraki koşu bulunamadı')+'</td><td><input aria-label="'+(i+1)+'. ayak at numaraları" data-leg="'+i+'" placeholder="Örn. 2, 4, 7" style="width:130px;max-width:100%;padding:8px;background:#0b0c0f;color:#fff;border:1px solid #3c3a40;border-radius:7px"></td></tr>';
     }).join('')+'</tbody></table>';
-    message.textContent=selected.length===6?'Altı ayak programı hazır. At numaralarını kendiniz girip taslağı kopyalayabilirsiniz.':'Bu başlangıçtan sonra altı koşunun tamamı kaynakta bulunmuyor; eksik ayaklar işaretlendi.';
+    const horses=Array.isArray(c.horses)?c.horses:[];
+    horseSuggestions.className='race-empty';
+    horseSuggestions.textContent=horses.length?'Bugünkü programdan alınan at listesi: '+horses.slice(0,50).map(h=>(h.number?h.number+'. ':'')+h.name).join(' · ')+(horses.length>50?' …':''):'At isimleri kaynak tarafından sağlanmadı; numaraları elle girebilirsiniz.';
+    message.textContent='Kaynak: TJK günlük programı. Program 5 dakikada bir yenilenir. Son veri: '+(c.updatedAt?new Date(c.updatedAt).toLocaleString('tr-TR'):'şimdi')+'.';
   }
   async function load(){
+    refreshButton.disabled=true;refreshButton.textContent='Veri yenileniyor…';
     try{
       const res=await fetch(api,{headers:{Accept:'application/json'},cache:'no-store'});const data=await res.json();
       if(!res.ok)throw new Error(data.error||'Günlük program alınamadı.');
@@ -256,23 +264,28 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
       courseSelect.replaceChildren();
       courses.forEach((c,i)=>courseSelect.add(new Option(c.course||('Hipodrom '+(i+1)),String(i))));
       if(!courses.length)throw new Error('Programda hipodrom bulunamadı.');
-      updateStarts();message.textContent='Kaynak: '+(data.source||'Günlük yarış programı')+'. Son güncelleme: '+(data.fetchedAt?new Date(data.fetchedAt).toLocaleString('tr-TR'):'belirtilmedi')+'.';
+      updateStarts();message.textContent='Kaynak: '+(data.source||'TJK günlük programı')+'. Son güncelleme: '+(data.fetchedAt?new Date(data.fetchedAt).toLocaleString('tr-TR'):'belirtilmedi')+'.';
     }catch(e){
       courseSelect.replaceChildren(new Option('Program şu an alınamıyor',''));
       startSelect.replaceChildren(new Option('Program şu an alınamıyor',''));
-      legsEl.className='race-empty';legsEl.textContent='Altılı programı şu anda yüklenemedi. Biraz sonra yeniden deneyin.';
+      legsEl.className='race-empty';legsEl.textContent='Yarış programı şu anda resmî kaynaktan alınamadı. Biraz sonra yeniden deneyin.';
+      horseSuggestions.className='race-empty';horseSuggestions.textContent='Canlı at listesi alınamadı; sistem sahte at veya yarış verisi göstermiyor.';
       message.textContent='Gerçek yarış verisi gelmediği için program uydurularak gösterilmedi.';
-    }
+    }finally{refreshButton.disabled=false;refreshButton.textContent='Anlık veriyi yenile';}
   }
   courseSelect.addEventListener('change',updateStarts);
   startSelect.addEventListener('change',renderLegs);
+  refreshButton.addEventListener('click',load);
   copyButton.addEventListener('click',async()=>{
     const c=currentCourse();const start=Number(startSelect.value);
-    const lines=['EL BANKO · Altılı taslağı','Hipodrom: '+(c?c.course:'Belirtilmedi'),'Başlangıç koşusu: '+(start||'Belirtilmedi')];
+    const lines=['EL BANKO · Kupon taslağı','Hipodrom: '+(c?c.course:'Belirtilmedi'),'Başlangıç koşusu: '+(start||'Belirtilmedi'),'Veri kaynağı: TJK günlük programı'];
     for(let i=0;i<6;i++){const input=legsEl.querySelector('[data-leg="'+i+'"]');lines.push((i+1)+'. ayak: '+(input&&input.value.trim()?input.value.trim():'Seçim girilmedi'));}
-    try{await navigator.clipboard.writeText(lines.join('\n'));message.textContent='Altılı taslağı kopyalandı. Bu yalnızca kişisel taslaktır; bahis gönderilmedi.';}
-    catch(e){message.textContent=lines.join('\n');}
+    const draft=lines.join('\n');
+    try{await navigator.clipboard.writeText(draft);message.textContent='Kupon taslağı hazırlandı ve kopyalandı. Bu yalnızca taslaktır; bahis gönderilmedi.';}
+    catch(e){message.textContent=draft;}
   });
+  load();
+  setInterval(load,5*60*1000);
   load();
 })();
 </script>
