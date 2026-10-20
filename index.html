@@ -130,7 +130,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 @media(max-width:560px){.member-grid{grid-template-columns:1fr}.member-full{grid-column:auto}}
 
  
-/* EL BANKO kupon ve jeton merkezi — demo jetonlar nakde çevrilemez */
+/* EL BANKO kupon ve jeton merkezi */
 .eb-wallet{margin:24px 0;padding:clamp(16px,3vw,24px);border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(217,180,91,.1),#111216 58%);box-shadow:0 16px 48px #0005}
 .eb-wallet h2{margin:0 0 7px;font-size:clamp(22px,4vw,29px);color:var(--gold-light)}
 .eb-wallet-intro{margin:0 0 18px;color:var(--muted);font-size:13px}
@@ -404,14 +404,13 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 <section class="eb-wallet" id="eb-coupon-center" aria-labelledby="eb-wallet-title">
   <div class="eyebrow" style="justify-content:flex-start;letter-spacing:.13em">EL BANKO OYUN MERKEZİ</div>
   <h2 id="eb-wallet-title">Jeton Al · Kupon Yap · Kupon Paylaş</h2>
-  <p class="eb-wallet-intro">Kuponlarını oluştur, bağlantı veya kod olarak paylaş ve oyun içi jetonlarını takip et. Bu jetonlar deneme amaçlıdır; para değeri yoktur ve nakde çevrilemez.</p>
+  <p class="eb-wallet-intro">Kupon taslağını oluştur ve paylaş. Jetonlar ücretsiz olarak verilmez; satın alma sistemi şu anda etkin değildir.</p>
   <div class="eb-wallet-grid">
     <div class="eb-wallet-card">
       <h3>🪙 Jeton Cüzdanım</h3>
-      <p>Bu cihazda saklanan deneme jeton bakiyesi.</p>
-      <div class="eb-wallet-balance"><span id="eb-token-balance">100</span> <span style="font-size:14px">JETON</span></div>
-      <button type="button" class="eb-action secondary" id="eb-token-refresh">Bakiyeyi yenile</button>
-      <div class="eb-message" id="eb-token-message" role="status" aria-live="polite">Deneme bakiyesiyle kupon taslağı oluşturabilirsin.</div>
+      <p>Jeton bakiyesi.</p>
+      <div class="eb-wallet-balance"><span id="eb-token-balance">0</span> <span style="font-size:14px">JETON</span></div>
+      <div class="eb-message" id="eb-token-message" role="status" aria-live="polite">Ücretsiz jeton dağıtımı kaldırıldı. Gerçek satın alma henüz etkin değildir.</div>
     </div>
     <div class="eb-wallet-card">
       <h3>🪙 Jeton Paketi Al</h3>
@@ -422,13 +421,6 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
         <div class="eb-package"><div><strong>Premium Paket</strong><small>1.000 jeton · ödeme beklemede</small></div><button type="button" data-token-package="Premium Paket · 1.000 jeton">Paketi seç</button></div>
       </div>
       <div class="eb-message" id="eb-payment-message" role="status" aria-live="polite">Durum: PayTR/iyzico ödeme bağlantısı kurulmadı. Kart bilgisi girme ve ödeme yapma alanı henüz açılmadı.</div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(212,175,55,.2)">
-        <strong style="display:block;margin-bottom:8px">Ücretsiz demo jetonları</strong>
-        <div class="eb-packages">
-          <div class="eb-package"><div><strong>Deneme</strong><small>+25 demo jeton</small></div><button type="button" data-demo-tokens="25">Ücretsiz al</button></div>
-          <div class="eb-package"><div><strong>Deneme Plus</strong><small>+100 demo jeton</small></div><button type="button" data-demo-tokens="100">Ücretsiz al</button></div>
-        </div>
-      </div>
     </div>
     <div class="eb-wallet-card">
       <h3>🎟️ Kupon Yap</h3>
@@ -485,15 +477,13 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
  const shareMsg=document.getElementById('eb-share-message');
  const shareCode=document.getElementById('eb-share-code');
  const couponList=document.getElementById('eb-coupon-list');
- function readBalance(){try{const n=Number(localStorage.getItem(KEY));return Number.isFinite(n)&&n>=0?Math.floor(n):100}catch{return 100}}
+ function readBalance(){try{const n=Number(localStorage.getItem(KEY));return Number.isFinite(n)&&n>=0?Math.floor(n):0}catch{return 0}}
  function writeBalance(n){try{localStorage.setItem(KEY,String(n))}catch{}balanceEl.textContent=String(n)}
  function readCoupons(){try{const v=JSON.parse(localStorage.getItem(COUPONS)||'[]');return Array.isArray(v)?v:[]}catch{return []}}
  function writeCoupons(v){try{localStorage.setItem(COUPONS,JSON.stringify(v))}catch{}}
  function code(){return 'EB-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Date.now().toString(36).slice(-5).toUpperCase()}
  function renderCoupons(){const items=readCoupons();couponList.replaceChildren();if(!items.length)return;items.slice().reverse().slice(0,5).forEach(item=>{const card=document.createElement('div');card.className='eb-coupon';const title=document.createElement('strong');title.textContent=item.title;const detail=document.createElement('small');detail.textContent='Kod: '+item.code+' · '+item.details;card.append(title,detail);couponList.append(card)})}
  writeBalance(readBalance());renderCoupons();
- document.getElementById('eb-token-refresh').addEventListener('click',()=>{writeBalance(readBalance());tokenMsg.textContent='Bu cihazdaki demo bakiyesi yenilendi.'});
- document.querySelectorAll('[data-demo-tokens]').forEach(btn=>btn.addEventListener('click',()=>{const amount=Number(btn.getAttribute('data-demo-tokens'));const next=readBalance()+amount;writeBalance(next);tokenMsg.textContent=amount+' ücretsiz demo jeton eklendi. Yeni bakiye: '+next+'. Bu jetonlar para değildir.'}));
  document.querySelectorAll('[data-token-package]').forEach(btn=>btn.addEventListener('click',()=>{const message=document.getElementById('eb-payment-message');message.textContent='Seçtiğin paket: '+btn.getAttribute('data-token-package')+'. Gerçek ödeme sistemi henüz bağlı olmadığı için satın alma tamamlanmadı ve ücret alınmadı.';}));
  document.getElementById('eb-coupon-form').addEventListener('submit',e=>{e.preventDefault();const title=document.getElementById('eb-coupon-title').value.trim();const details=document.getElementById('eb-coupon-details').value.trim();if(!title||!details){couponMsg.textContent='Lütfen başlık ve kupon içeriğini doldur.';return}const item={code:code(),title,details,createdAt:new Date().toISOString()};const items=readCoupons();items.push(item);writeCoupons(items.slice(-30));shareCode.value=item.code;couponMsg.textContent='Kupon taslağı oluşturuldu: '+item.code+'. Taslak yalnızca bu cihazda saklanır.';shareMsg.textContent='Kupon kodun hazır. Kopyalamak için düğmeye bas.';renderCoupons()});
  document.getElementById('eb-share-button').addEventListener('click',async()=>{const codeValue=shareCode.value.trim();if(!codeValue){shareMsg.textContent='Önce bir kupon taslağı oluştur.';return}const item=readCoupons().find(c=>c.code===codeValue);if(!item){shareMsg.textContent='Bu cihazda bu kodla eşleşen kupon yok.';return}const text='EL BANKO kupon taslağı: '+item.title+' | Kod: '+item.code+' | İçerik: '+item.details;try{await navigator.clipboard.writeText(text);shareMsg.textContent='Kupon metni panoya kopyalandı; istediğin yerde paylaşabilirsin.'}catch{shareMsg.textContent=text}});
