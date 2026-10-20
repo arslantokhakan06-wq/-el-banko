@@ -25,21 +25,21 @@ async function getHtml(url){
 }
 function parseHorses(html){
   const horses=[];
-  const trRe=/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi;
+  const trRe=/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
   let tm;
   while((tm=trRe.exec(html))){
     const row=tm[1],cells=[];
-    const tdRe=/<t[dh]\\b[^>]*>([\\s\\S]*?)<\\/t[dh]>/gi;
+    const tdRe=/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
     let td;while((td=tdRe.exec(row)))cells.push(cleanText(td[1]));
     if(cells.length<8)continue;
-    const linkRe=/<a\\b[^>]*>([\\s\\S]*?)<\\/a>/gi;
+    const linkRe=/<a\b[^>]*>([\s\S]*?)<\/a>/gi;
     let lm,horse="";
     while((lm=linkRe.exec(row))){
-      const name=cleanText(lm[1]).replace(/\\s*\\(\\d+\\)\\s*$/,"").trim();
+      const name=cleanText(lm[1]).replace(/\s*\(\d+\)\s*$/,"").trim();
       if(name&&!/^(PDF Program|Özet PDF Program|CSV Program|Resmi Program|Detaylı At Karşılaştırma|Bu derece|Image|Koşu Bilgisi|At Karşılaştırma|Jokey Karşılaştırma|Sahip Karşılaştırma|Antrenör Karşılaştırma|İdman Bilgileri)$/i.test(name)&&name.length>1&&!/Koşu$/.test(name)){horse=name;break;}
     }
     if(!horse||/^(Forma|At İsmi|Jokey|Antrenör|Sahip)$/.test(horse)||horses.some(h=>h.name===horse))continue;
-    const numberCell=cells.find((v,i)=>i<4&&/^\\d{1,2}$/.test(v))||"";
+    const numberCell=cells.find((v,i)=>i<4&&/^\d{1,2}$/.test(v))||"";
     horses.push({number:numberCell,name:horse,details:cells.slice(0,18)});
     if(horses.length>=100)break;
   }
@@ -47,11 +47,11 @@ function parseHorses(html){
 }
 function parseCourse(html,label,url){
   const headings=[];
-  const headingRe=/<h[1-6]\\b[^>]*>([\\s\\S]*?)<\\/h[1-6]>/gi;
+  const headingRe=/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi;
   let hm;
   while((hm=headingRe.exec(html))){
     const title=cleanText(hm[1]);
-    const m=title.match(/(\\d+)\\.?\\s*Koşu\\s*([0-2]?\\d[.:][0-5]\\d)/i);
+    const m=title.match(/(\d+)\.?\s*Koşu\s*([0-2]?\d[.:][0-5]\d)/i);
     if(m)headings.push({number:Number(m[1]),time:m[2].replace(".",":"),title,offset:hm.index,end:headingRe.lastIndex});
   }
   const races=headings.map((h,i)=>{
