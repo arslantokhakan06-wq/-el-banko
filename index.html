@@ -246,14 +246,14 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     const c=currentCourse();const races=c&&Array.isArray(c.races)?c.races:[];
     const start=Number(startSelect.value);const selected=Array.from({length:6},(_,n)=>races.find(x=>Number(x.number)===start+n)||null);
     if(!start||!selected.some(Boolean)){legsEl.className='race-empty';legsEl.textContent='Hipodrom ve altılı başlangıç koşusunu seçin; ardından her ayak için atları işaretleyin.';horseSuggestions.className='race-empty';horseSuggestions.textContent='Canlı at seçenekleri program verisi geldikten sonra burada gösterilir.';return;}
-    const horses=Array.isArray(c.horses)?c.horses:[];
     legsEl.className='race-results';
     legsEl.innerHTML='<div class="race-meta">Her ayakta bir veya daha fazla at seçin. Altı ayak tamamlanınca kupon taslağı oluşturabilirsiniz.</div><table><thead><tr><th>Ayak</th><th>Koşu</th><th>Saat</th><th>At seçimi</th></tr></thead><tbody>'+selected.map((r,i)=>{
-      const options=horses.length?'<div style="display:flex;flex-wrap:wrap;gap:8px">'+horses.map((h,j)=>'<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid #514523;border-radius:8px"><input type="checkbox" data-leg="'+i+'" data-horse="'+esc(h.number||h.name||j+1)+'" style="accent-color:#d4af37"><span>'+esc(h.number?h.number+'. ':'')+esc(h.name||('At '+(j+1)))+'</span></label>').join('')+'</div>':'<label>At numaraları (virgülle ayırın)<input aria-label="'+(i+1)+'. ayak at numaraları" data-leg-input="'+i+'" placeholder="Örn. 2, 4, 7" style="display:block;width:100%;margin-top:6px;padding:8px;background:#0b0c0f;color:#fff;border:1px solid #3c3a40;border-radius:7px"></label>';
+      const raceHorses=r&&Array.isArray(r.horses)?r.horses:[];
+      const options=raceHorses.length?'<div style="display:flex;flex-wrap:wrap;gap:8px">'+raceHorses.map((h,j)=>'<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid #514523;border-radius:8px"><input type="checkbox" data-leg="'+i+'" data-horse="'+esc(h.number||h.name||j+1)+'" style="accent-color:#d4af37"><span>'+esc(h.number?h.number+'. ':'')+esc(h.name||('At '+(j+1)))+'</span></label>').join('')+'</div>':'<label>At numaraları (virgülle ayırın)<input aria-label="'+(i+1)+'. ayak at numaraları" data-leg-input="'+i+'" placeholder="Örn. 2, 4, 7" style="display:block;width:100%;margin-top:6px;padding:8px;background:#0b0c0f;color:#fff;border:1px solid #3c3a40;border-radius:7px"></label>';
       return '<tr><td><strong>'+(i+1)+'. ayak</strong></td><td>'+(r?esc(r.number)+'. koşu':'—')+'</td><td>'+(r?esc(r.time||'Belirtilmedi'):'—')+'</td><td>'+(r?options:'Bu hipodromda bu ayak için koşu bulunamadı')+'</td></tr>';
     }).join('')+'</tbody></table>';
     horseSuggestions.className='race-empty';
-    horseSuggestions.textContent=horses.length?'Atları her ayağın altında işaretleyin; seçiminiz kupon taslağına aktarılır.':'Canlı at isimleri şu anda veri akışında yok. Sistem at uydurmaz; geçici olarak numaraları elle girebilirsiniz.';
+    horseSuggestions.textContent=selected.some(r=>r&&Array.isArray(r.horses)&&r.horses.length)?'Her ayak için yalnızca o koşunun atlarını işaretleyin. Seçimler kupon taslağına aktarılır.':'Canlı at isimleri şu anda veri akışında yok. Sistem at uydurmaz; geçici olarak numaraları elle girebilirsiniz.';
     message.textContent='EL BANKO yarış programı güncellendi. Son veri: '+(c.updatedAt?new Date(c.updatedAt).toLocaleString('tr-TR'):'şimdi')+'.';
   }
   async function load(){
