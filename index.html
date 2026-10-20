@@ -388,7 +388,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     }).join('');
     raceResults.className='race-results';
     raceResults.innerHTML='<div class="race-meta">EL BANKO · Güncel yarış verileri</div>'+cards;
-    raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri durumu:</b> Resmî TJK programı alındı. '+courses.length+' hipodrom · '+total+' at kaydı.</span>';
+    raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri durumu:</b> EL BANKO yarış programı verisi alındı. '+courses.length+' hipodrom · '+total+' at kaydı.</span>';
     raceUpdated.textContent='Son güncelleme: '+new Date(data.fetchedAt).toLocaleString('tr-TR');
   }
   async function loadRaces(){
