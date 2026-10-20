@@ -216,7 +216,7 @@ const server=http.createServer(async(req,res)=>{
     const name=String(b.name||"").trim(),username=String(b.username||"").trim(),email=String(b.email||"").trim().toLowerCase(),phone=String(b.phone||"").trim(),password=String(b.password||"");
     if(name.length<2||name.length>100)return send(res,400,{error:"Ad soyad bilgisi geçersiz."});
     if(!/^[A-Za-z0-9._-]{3,30}$/.test(username))return send(res,400,{error:"Kullanıcı adı 3-30 karakter olmalı."});
-    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return send(res,400,{error:"Geçerli e-posta girin."});
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return send(res,400,{error:"Geçerli e-posta girin."});
     if(password.length<10||password.length>128)return send(res,400,{error:"Şifre en az 10 karakter olmalı."});
     if(b.termsAccepted!==true)return send(res,400,{error:"Üyelik koşullarını kabul etmelisiniz."});
     try{const hash=await hashPassword(password);const r=await db.query("INSERT INTO members(full_name,username,email,phone,password_hash) VALUES($1,$2,$3,$4,$5) RETURNING id,full_name,username,email,status,created_at",[name,username,email,phone||null,hash]);return send(res,201,{ok:true,message:"Üyelik başvurunuz kaydedildi. Yönetici onayından sonra hesabınız etkinleştirilecektir.",member:r.rows[0]});}
