@@ -307,14 +307,16 @@ const server=http.createServer(async(req,res)=>{
     const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme bildirimi için giriş yapın."});
     let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
     const id=Number(b.orderId),note=String(b.note||"").trim().slice(0,500),reference=String(b.bankReference||"").trim().slice(0,160);
+    const senderName=String(b.senderName||"").trim().slice(0,120),senderBank=String(b.senderBank||"").trim().slice(0,120),senderIban=String(b.senderIban||"").replace(/\\s+/g,"").toUpperCase(),reportedAmount=Number(b.reportedAmount);
     if(!Number.isSafeInteger(id)||id<=0)return send(res,400,{error:"Sipariş numarası geçersiz."});
-    try{const r=await db.query("UPDATE payment_orders SET status='reported',payment_note=$1,provider_reference=$2,submitted_at=NOW() WHERE id=$3 AND member_id=$4 AND status='pending' RETURNING id,status",[note,reference,id,m.id]);if(!r.rowCount)return send(res,409,{error:"Sipariş bulunamadı veya daha önce bildirilmiş/onaylanmış."});return send(res,200,{ok:true,order:r.rows[0],message:"Ödeme bildirimi alındı. Kontör, yönetici banka hareketini doğrulayana kadar yüklenmez."});}
+    if(senderName.length<2||senderBank.length<2||!/^TR[0-9A-Z]{24}$/.test(senderIban)||!Number.isFinite(reportedAmount)||reportedAmount<=0||reportedAmount>100000000)return send(res,400,{error:"Gönderen adı, banka adı, geçerli TR IBAN ve gönderilen tutarı (TL) doğru girin."});
+    try{const r=await db.query("UPDATE payment_orders SET status='reported',payment_note=$1,provider_reference=$2,submitted_at=NOW(),sender_name=$5,sender_bank=$6,sender_iban=$7,reported_amount_kurus=$8 WHERE id=$3 AND member_id=$4 AND status='pending' RETURNING id,status",[note,reference,id,m.id,senderName,senderBank,senderIban,Math.round(reportedAmount*100)]);if(!r.rowCount)return send(res,409,{error:"Sipariş bulunamadı veya daha önce bildirilmiş/onaylanmış."});return send(res,200,{ok:true,order:r.rows[0],message:"Ödeme bildirimi alındı. Kontör, yönetici gerçek banka hareketini doğrulayıp onaylayana kadar yüklenmez."});}
     catch(e){console.error("Payment notification failed",e.message);return send(res,500,{error:"Ödeme bildirimi kaydedilemedi."});}
   }
   if(url.pathname==="/api/admin/payment-orders" && req.method==="GET"){
     const key=String(req.headers["x-admin-key"]||"");
     if(!process.env.ELBANKO_ADMIN_KEY||!safeEqual(key,process.env.ELBANKO_ADMIN_KEY))return send(res,403,{error:"Yönetici yetkisi doğrulanamadı."});
-    try{const r=await db.query("SELECT o.id,o.member_id,m.full_name,m.username,m.email,o.package_tokens,o.amount_kurus,o.status,o.provider_reference,o.payment_note,o.created_at,o.submitted_at FROM payment_orders o JOIN members m ON m.id=o.member_id ORDER BY CASE WHEN o.status='reported' THEN 0 ELSE 1 END,o.created_at DESC LIMIT 100");return send(res,200,{orders:r.rows});}
+    try{const r=await db.query("SELECT o.id,o.member_id,m.full_name,m.username,m.email,o.package_tokens,o.amount_kurus,o.status,o.provider_reference,o.payment_note,o.sender_name,o.sender_bank,o.sender_iban,o.reported_amount_kurus,o.created_at,o.submitted_at FROM payment_orders o JOIN members m ON m.id=o.member_id ORDER BY CASE WHEN o.status='reported' THEN 0 ELSE 1 END,o.created_at DESC LIMIT 100");return send(res,200,{orders:r.rows});}
     catch(e){console.error("Admin payment orders failed",e.message);return send(res,500,{error:"Yönetici sipariş listesi alınamadı."});}
   }
   if(url.pathname==="/api/admin/payment-orders/approve" && req.method==="POST"){
