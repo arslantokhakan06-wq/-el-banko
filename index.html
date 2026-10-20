@@ -543,7 +543,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   <div class="eb-wallet-card" id="eb-admin-payment-panel" style="margin-top:12px">
     <h3>🔐 Yönetici · IBAN ödeme onayları</h3>
     <p>Bu alan yalnızca Render ortamına kaydedilmiş yönetici anahtarıyla çalışır. Anahtarı üyelerle paylaşmayın.</p>
-    <label for="eb-admin-key">Yönetici anahtarı<input id="eb-admin-key" type="password" autocomplete="off" placeholder="Render'daki ELBANKO_ADMIN_KEY"></label>
+    <label for="eb-admin-key">Yönetici anahtarı<input id="eb-admin-key" type="password" autocomplete="off" placeholder="Render'daki ELBANKO_ADMIN_KEY (veya mevcut ADMIN_PASSWORD)"></label>
     <button type="button" class="eb-action secondary" id="eb-admin-load-orders">Ödeme bildirimlerini getir</button>
     <div id="eb-admin-orders" class="eb-coupon-list" aria-live="polite"></div>
     <div id="eb-admin-message" class="eb-message" role="status" aria-live="polite">Onay yalnızca banka hesabına gelen gerçek ödeme kontrol edildikten sonra verilmelidir.</div>
@@ -571,7 +571,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
  function writeCoupons(v){try{localStorage.setItem(COUPONS,JSON.stringify(v))}catch{}}
  function code(){return 'EB-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Date.now().toString(36).slice(-5).toUpperCase()}
  function renderCoupons(){const items=readCoupons();couponList.replaceChildren();if(!items.length)return;items.slice().reverse().slice(0,5).forEach(item=>{const card=document.createElement('div');card.className='eb-coupon';const title=document.createElement('strong');title.textContent=item.title;const detail=document.createElement('small');detail.textContent='Kod: '+item.code+' · '+item.details;card.append(title,detail);couponList.append(card)})}
- writeBalance(readBalance());renderCoupons();
+ balanceEl.textContent='—';tokenMsg.textContent='Gerçek kontör bakiyesi, onaylı üye girişi yaptıktan sonra sunucudan gösterilir. Bu cihazdaki yerel demo bakiyesi kullanılmaz.';renderCoupons();
  const API='https://el-banko-race-api.onrender.com';
  let currentIbanOrderId=null;
  let paymentInfo=null;
