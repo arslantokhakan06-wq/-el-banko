@@ -690,11 +690,6 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 
  document.getElementById('eb-share-button').addEventListener('click',async()=>{const codeValue=shareCode.value.trim();if(!codeValue){shareMsg.textContent='Önce bir kupon taslağı oluştur.';return}const item=readCoupons().find(c=>c.code===codeValue);if(!item){shareMsg.textContent='Bu cihazda bu kodla eşleşen kupon yok.';return}const text='EL BANKO kupon taslağı: '+item.title+' | Kod: '+item.code+' | İçerik: '+item.details;try{await navigator.clipboard.writeText(text);shareMsg.textContent='Kupon metni panoya kopyalandı; istediğin yerde paylaşabilirsin.'}catch{shareMsg.textContent=text}});
  document.getElementById('eb-payment-button').addEventListener('click',()=>{document.getElementById('eb-payment-check').textContent='Kontrol sonucu: Gerçek ödeme sağlayıcısı bağlantısı henüz kurulmadı. Ödeme alınmadı. Entegrasyon tamamlandığında bu bölüm güvenli ödeme sayfasına yönlendirecek.'});
- const ibanButton=document.getElementById('eb-iban-order-button');
- if(ibanButton)ibanButton.addEventListener('click',()=>{
-   const pkg=document.getElementById('eb-iban-package').value;
-   document.getElementById('eb-iban-order-message').textContent='Seçilen paket: '+pkg+'. IBAN ve hesap sahibi bilgileri yönetici tarafından eklenmeli; gerçek banka transferi sonrası yönetici banka hareketini kontrol ederek onaylamalıdır. Şu an talep sunucuya gönderilmiyor ve jeton yüklenmiyor.';
- });
 })();
 </script>
 
