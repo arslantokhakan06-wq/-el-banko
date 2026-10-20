@@ -605,10 +605,14 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
    const ibanSelect=document.getElementById('eb-iban-package');
    if(ibanSelect)ibanSelect.selectedIndex=[...ibanSelect.options].findIndex(o=>o.text===selectedPackage.label);
  }));
- buyPackageButton.addEventListener('click',()=>{
+ buyPackageButton.addEventListener('click',async()=>{
    if(!selectedPackage){document.getElementById('eb-payment-message').textContent='Önce bir jeton paketi seçin.';return;}
-   document.getElementById('eb-payment-message').textContent='Seçilen paket: '+selectedPackage.label+'. PayTR güvenli ödeme sayfası henüz sunucuya bağlanmadı. Ücret alınmadı ve jeton bakiyesi değiştirilmedi. Ödemeyi etkinleştirmek için PayTR işyeri hesabı, Merchant ID/Key/Salt ve her paket için fiyat sunucu ortam değişkenlerine eklenmelidir.';
-   document.getElementById('eb-payment-check').textContent='Ödeme beklemede: PayTR bağlantısı ve paket fiyatları henüz ayarlanmadığı için ödeme başlatılmadı.';
+   const packageTokens={start:200,standard:500,premium:1000,pro:2500,ultimate:5000}[selectedPackage.id];
+   buyPackageButton.disabled=true;
+   document.getElementById('eb-payment-message').textContent='Sunucudan ödeme bağlantısı kontrol ediliyor…';
+   try{const data=await api('/api/payments/create',{method:'POST',body:JSON.stringify({packageTokens})});document.getElementById('eb-payment-message').textContent=data.message||'Ödeme bağlantısı hazırlanıyor.'}
+   catch(err){document.getElementById('eb-payment-message').textContent=err.message;document.getElementById('eb-payment-check').textContent='Güvenlik: Ödeme alınmadı ve kontör eklenmedi. Sağlayıcı seçimi, üye işyeri onayı, paket fiyatları ve gizli anahtarlar tamamlanana kadar ödeme kapalıdır.'}
+   finally{buyPackageButton.disabled=false}
    document.getElementById('eb-payment-check').scrollIntoView({behavior:'smooth',block:'center'});
  });
  document.getElementById('eb-import-sixfold').addEventListener('click',()=>{
