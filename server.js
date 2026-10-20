@@ -23,38 +23,45 @@ async function getHtml(url){
   if(!r.ok) throw new Error("TJK yanıtı: HTTP "+r.status);
   return await r.text();
 }
+function parseHorses(html){
+  const horses=[];
+  const trRe=/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi;
+  let tm;
+  while((tm=trRe.exec(html))){
+    const row=tm[1],cells=[];
+    const tdRe=/<t[dh]\\b[^>]*>([\\s\\S]*?)<\\/t[dh]>/gi;
+    let td;while((td=tdRe.exec(row)))cells.push(cleanText(td[1]));
+    if(cells.length<8)continue;
+    const linkRe=/<a\\b[^>]*>([\\s\\S]*?)<\\/a>/gi;
+    let lm,horse="";
+    while((lm=linkRe.exec(row))){
+      const name=cleanText(lm[1]).replace(/\\s*\\(\\d+\\)\\s*$/,"").trim();
+      if(name&&!/^(PDF Program|Özet PDF Program|CSV Program|Resmi Program|Detaylı At Karşılaştırma|Bu derece|Image|Koşu Bilgisi|At Karşılaştırma|Jokey Karşılaştırma|Sahip Karşılaştırma|Antrenör Karşılaştırma|İdman Bilgileri)$/i.test(name)&&name.length>1&&!/Koşu$/.test(name)){horse=name;break;}
+    }
+    if(!horse||/^(Forma|At İsmi|Jokey|Antrenör|Sahip)$/.test(horse)||horses.some(h=>h.name===horse))continue;
+    const numberCell=cells.find((v,i)=>i<4&&/^\\d{1,2}$/.test(v))||"";
+    horses.push({number:numberCell,name:horse,details:cells.slice(0,18)});
+    if(horses.length>=100)break;
+  }
+  return horses;
+}
 function parseCourse(html,label,url){
-  const races=[];
-  const headingRe=/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi;
+  const headings=[];
+  const headingRe=/<h[1-6]\\b[^>]*>([\\s\\S]*?)<\\/h[1-6]>/gi;
   let hm;
   while((hm=headingRe.exec(html))){
     const title=cleanText(hm[1]);
-    const m=title.match(/(\d+)\.?\s*Koşu\s*([0-2]?\d[.:][0-5]\d)/i);
-    if(m) races.push({number:Number(m[1]),time:m[2].replace(".",":"),title});
+    const m=title.match(/(\\d+)\\.?\\s*Koşu\\s*([0-2]?\\d[.:][0-5]\\d)/i);
+    if(m)headings.push({number:Number(m[1]),time:m[2].replace(".",":"),title,offset:hm.index,end:headingRe.lastIndex});
   }
-  const horses=[];
-  const trRe=/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
-  let tm;
-  while((tm=trRe.exec(html))){
-    const row=tm[1];
-    const cells=[];
-    const tdRe=/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
-    let td;
-    while((td=tdRe.exec(row))) cells.push(cleanText(td[1]));
-    if(cells.length<8) continue;
-    const linkRe=/<a\b[^>]*>([\s\S]*?)<\/a>/gi;
-    let lm, horse="";
-    while((lm=linkRe.exec(row))){
-      const name=cleanText(lm[1]).replace(/\s*\(\d+\)\s*$/,"").trim();
-      if(name && !/^(PDF Program|Özet PDF Program|CSV Program|Resmi Program|Detaylı At Karşılaştırma|Bu derece|Image|Koşu Bilgisi|At Karşılaştırma|Jokey Karşılaştırma)$/i.test(name) && name.length>1 && !/Koşu$/.test(name)){horse=name;break;}
-    }
-    if(!horse || /^(Forma|At İsmi|Jokey|Antrenör|Sahip)$/.test(horse)) continue;
-    if(horses.some(h=>h.name===horse)) continue;
-    const numberCell=cells.find(c=>/^\d{1,2}$/.test(c));
-    horses.push({number:numberCell||"",name:horse,details:cells.slice(0,18)});
-    if(horses.length>=300) break;
-  }
-  return {course:label||"Hipodrom",url,races,horseCount:horses.length,horses,updatedAt:new Date().toISOString()};
+  const races=headings.map((h,i)=>{
+    const next=headings[i+1];
+    const segment=html.slice(h.end,next?next.offset:Math.min(html.length,h.end+250000));
+    return {number:h.number,time:h.time,title:h.title,horses:parseHorses(segment)};
+  });
+  const allHorses=[];
+  for(const race of races)for(const horse of race.horses)if(!allHorses.some(h=>h.name===horse.name))allHorses.push(horse);
+  return {course:label||"Hipodrom",url,races,horseCount:allHorses.length,horses:allHorses,updatedAt:new Date().toISOString()};
 }
 async function getDailyRaces(){
   const home=await getHtml(TJK_HOME);
@@ -64,7 +71,7 @@ async function getDailyRaces(){
   while((m=aRe.exec(home))){
     const href=(m[1].match(/href\s*=\s*["']([^"']+)["']/i)||[])[1];
     const label=cleanText(m[2]);
-    if(!href || !label || !href.includes("/TR/YarisSever/Info/Sehir/GunlukYarisProgrami")) continue;
+    if(!href || !label || !/\\/TR\\/YarisSever\\/Info\\/Sehir\\/GunlukYarisProgrami/i.test(decodeURIComponent(href))) continue;
     const url=new URL(href,TJK_HOME).toString();
     if(!links.some(x=>x.url===url)) links.push({label,url});
   }
@@ -74,7 +81,7 @@ async function getDailyRaces(){
     const batch=links.slice(i,i+3);
     const got=await Promise.all(batch.map(async item=>{
       try { return parseCourse(await getHtml(item.url),item.label,item.url); }
-      catch(e){ return {course:item.label,url:item.url,races:[],horses:[],horseCount:0,error:"Bu hipodromun verisi şu anda alınamadı."}; }
+      catch(e){ console.error("EL BANKO course fetch failed",item.label,e.message); return {course:item.label,url:item.url,races:[],horses:[],horseCount:0,error:"Bu hipodromun verisi şu anda alınamadı."}; }
     }));
     results.push(...got);
   }
@@ -140,7 +147,7 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==="/api/races" && req.method==="GET"){
     if(cache.data && cache.until>Date.now()) return send(res,200,{...cache.data,cached:true});
     try{const data=await getDailyRaces();cache={data,until:Date.now()+5*60*1000};return send(res,200,{...data,cached:false});}
-    catch(e){return send(res,502,{error:"Günlük yarış verisi şu anda resmî kaynaktan alınamadı.",detail:String(e.message||e),source:"TJK",checkedAt:new Date().toISOString()});}
+    catch(e){console.error("EL BANKO daily races failed",e.message);return send(res,502,{error:"Günlük yarış verisi şu anda resmî kaynaktan alınamadı.",detail:String(e.message||e),source:"EL BANKO",checkedAt:new Date().toISOString()});}
   }
   return send(res,404,{error:"Bulunamadı"});
 });
