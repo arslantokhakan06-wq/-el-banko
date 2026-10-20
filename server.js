@@ -21,6 +21,10 @@ async function initMembers(){
  await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ");
  await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ");
  await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(100)");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS payment_note VARCHAR(500)");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ");
+ await db.query("ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(100)");
  await db.query("CREATE TABLE IF NOT EXISTS coupon_drafts (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, title VARCHAR(120) NOT NULL, content TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
  await db.query("INSERT INTO member_wallets(member_id,balance) SELECT id,0 FROM members ON CONFLICT(member_id) DO NOTHING");
  await db.query("DELETE FROM member_sessions WHERE expires_at < NOW()");
