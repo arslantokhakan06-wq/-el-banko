@@ -157,6 +157,28 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 .eb-wallet .eb-coupon small{display:block;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
 @media(max-width:620px){.eb-wallet-grid{grid-template-columns:1fr}.eb-wallet .eb-package{align-items:flex-start;flex-direction:column}.eb-wallet .eb-package button{width:100%}}
 
+
+/* Kısa, mobil öncelikli yarış programı */
+.race-compact-intro{margin-bottom:10px!important}
+.race-results-compact{display:grid;gap:8px;padding:8px;border-radius:12px}
+.race-course-compact{margin:0;padding:0;overflow:hidden;border-radius:11px;background:#14151a}
+.race-course-summary,.race-mini summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.race-course-summary::-webkit-details-marker,.race-mini summary::-webkit-details-marker{display:none}
+.race-course-summary{padding:13px 14px}
+.race-course-summary strong{display:block;color:var(--gold-light);font-size:14px}
+.race-course-summary small,.race-mini summary small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.race-course-chevron,.race-mini-count{color:var(--gold-light);font-size:11px;white-space:nowrap}
+.race-course-body{padding:0 9px 9px}
+.race-mini{border-top:1px solid #2b2a2d}
+.race-mini summary{padding:10px 7px}
+.race-mini summary b{font-size:12px;color:#f4f1e9}
+.race-mini-body{padding:0 7px 10px}
+.race-mini-body>p{font-size:11px!important;margin:0 0 8px!important}
+.race-mini .race-table-wrap table{min-width:0;font-size:12px}
+.race-mini .race-table-wrap th,.race-mini .race-table-wrap td{padding:7px 9px}
+.race-mini .race-empty{padding:9px;font-size:11px}
+@media(max-width:600px){.race-data{padding:13px;margin-top:14px}.race-course-summary{padding:12px}.race-status{font-size:11px;padding:10px}.race-actions{gap:8px}.race-actions button{font-size:11px!important;padding:9px 11px!important}}
+
 </style>
 </head>
 <body>
@@ -182,14 +204,9 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 <p class="help">Yayın başlamamışsa veya kanal gömülü oynatmaya izin vermiyorsa görüntü açılmayabilir. Böyle bir durumda yayın sağlayıcısının aktif bir canlı yayın sunması gerekir.</p>
 
 <section class="race-data" aria-labelledby="race-data-title">
-  <div class="eyebrow" style="justify-content:flex-start;letter-spacing:.13em">GÜNLÜK VERİ KAYNAĞI</div>
-  <h2 id="race-data-title">Günlük Yarış Programı</h2>
-  <p>Koşu saatleri ve at bilgileri için resmi yarış programını kontrol edin. Program ve katılımcılar gün içinde değişebilir.</p>
-  <div class="race-grid">
-    <div class="race-item"><strong>KOŞU PROGRAMI</strong><span>Hipodrom, tarih ve koşu saatleri</span></div>
-    <div class="race-item"><strong>AT & JOKEY BİLGİLERİ</strong><span>Katılımcılar, sıklet ve koşu şartları</span></div>
-    <div class="race-item"><strong>PERFORMANS VERİSİ</strong><span>Geçmiş sonuçlar ve karşılaştırma bilgileri</span></div>
-  </div>
+  <div class="eyebrow" style="justify-content:flex-start;letter-spacing:.13em">GÜNÜN PROGRAMI</div>
+  <h2 id="race-data-title">Yarış Programı</h2>
+  <p class="race-compact-intro">Hipodromları ve koşuları kısa görünümde inceleyin. At listesi için koşuya dokunun.</p>
   <div class="race-status" id="race-status"><span aria-hidden="true">ⓘ</span><span><b>Veri durumu:</b> Günlük yarış programına bağlanılıyor…</span></div>
   <div class="race-actions">
     <span class="race-meta" id="race-updated">Veri henüz alınmadı</span>
@@ -378,18 +395,23 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
     const courses=Array.isArray(data.courses)?data.courses:[];
     if(!courses.length) throw new Error('Kaynakta görüntülenecek yarış programı bulunamadı.');
     let total=0;
-    const cards=courses.map(course=>{
+    const cards=courses.map((course,idx)=>{
       const races=Array.isArray(course.races)?course.races:[];
       const horses=Array.isArray(course.horses)?course.horses:[];
-      total+=horses.length;
-      const raceList=races.length?'<div class="race-meta">Koşular: '+races.map(r=>safeText(r.number)+'. koşu · '+safeText(r.time)).join(' &nbsp; · &nbsp; ')+'</div>':'';
-      const horseTable=horses.length?'<div class="race-table-wrap"><table><thead><tr><th>No</th><th>At</th><th>Program bilgileri</th></tr></thead><tbody>'+horses.map(h=>'<tr><td>'+safeText(h.number||'—')+'</td><td><strong>'+safeText(h.name)+'</strong></td><td>'+safeText((h.details||[]).slice(2,10).filter(Boolean).join(' · '))+'</td></tr>').join('')+'</tbody></table></div>':'<div class="race-empty">Bu hipodromun at listesi otomatik okunamadı.</div>';
-      return '<article class="race-course"><h3>'+safeText(course.course)+'</h3>'+raceList+horseTable+'</article>';
+      total+=Number(course.horseCount)||horses.length;
+      const raceRows=races.map(r=>{
+        const rh=Array.isArray(r.horses)?r.horses:[];
+        const horseRows=rh.length
+          ? '<div class="race-table-wrap"><table><thead><tr><th>No</th><th>At</th></tr></thead><tbody>'+rh.map(h=>'<tr><td>'+safeText(h.number||'—')+'</td><td><strong>'+safeText(h.name||'At ismi yok')+'</strong></td></tr>').join('')+'</tbody></table></div>'
+          : '<div class="race-empty">Bu koşunun at listesi henüz alınamadı.</div>';
+        return '<details class="race-mini"><summary><span><b>'+safeText(r.number)+'. Koşu</b><small>'+safeText(r.time||'Saat belirtilmedi')+'</small></span><span class="race-mini-count">'+rh.length+' at　⌄</span></summary><div class="race-mini-body">'+(r.title?'<p>'+safeText(r.title)+'</p>':'')+horseRows+'</div></details>';
+      }).join('');
+      return '<details class="race-course race-course-compact" '+(idx===0?'open':'')+'><summary class="race-course-summary"><span><strong>'+safeText(course.course||'Hipodrom')+'</strong><small>'+races.length+' koşu · '+(Number(course.horseCount)||horses.length)+' at</small></span><span class="race-course-chevron">⌄</span></summary><div class="race-course-body">'+(raceRows||'<div class="race-empty">Koşu bilgisi bulunamadı.</div>')+'</div></details>';
     }).join('');
-    raceResults.className='race-results';
-    raceResults.innerHTML='<div class="race-meta">EL BANKO · Güncel yarış verileri</div>'+cards;
-    raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri durumu:</b> EL BANKO yarış programı verisi alındı. '+courses.length+' hipodrom · '+total+' at kaydı.</span>';
-    raceUpdated.textContent='Son güncelleme: '+new Date(data.fetchedAt).toLocaleString('tr-TR');
+    raceResults.className='race-results race-results-compact';
+    raceResults.innerHTML=cards;
+    raceStatus.innerHTML='<span aria-hidden="true">✓</span><span><b>Veri hazır:</b> '+courses.length+' hipodrom · '+total+' at kaydı. Koşuya dokunarak atları açın.</span>';
+    raceUpdated.textContent='Güncelleme: '+new Date(data.fetchedAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
   }
   async function loadRaces(){
     refreshRaces.disabled=true;
