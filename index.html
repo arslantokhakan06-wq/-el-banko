@@ -94,7 +94,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
 
 
 /* Mobile-friendly EL BANKO in-site support chat */
-#eb-chat-launch{position:fixed;right:16px;bottom:16px;z-index:9998;border:1px solid #f4df9a;border-radius:999px;padding:13px 17px;background:linear-gradient(135deg,#f4df9a,#c99b36);color:#171208;font-weight:850;box-shadow:0 8px 28px #0009;cursor:pointer}
+#eb-chat-launch{display:flex;align-items:center;justify-content:center;text-decoration:none;position:fixed;right:16px;bottom:16px;z-index:9998;border:1px solid #f4df9a;border-radius:999px;padding:13px 17px;background:linear-gradient(135deg,#f4df9a,#c99b36);color:#171208;font-weight:850;box-shadow:0 8px 28px #0009;cursor:pointer}
 #eb-chat-panel{position:fixed;right:12px;bottom:78px;z-index:9999;width:min(370px,calc(100vw - 24px));height:min(520px,calc(100dvh - 110px));display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(217,180,91,.55);border-radius:18px;background:#101115;box-shadow:0 18px 60px #000b}
 #eb-chat-panel.eb-open{display:flex}
 .eb-chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;background:linear-gradient(120deg,#292215,#111216);border-bottom:1px solid rgba(217,180,91,.35)}
@@ -745,43 +745,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   <div class="member-notice"><strong>Önemli:</strong> Başvurular sunucuda saklanır ve yönetici onayına kadar beklemede tutulur. Veri tabanı bağlantısı tamamlanmadıysa kayıt alınamaz.</div>
 </section>
 
-<button id="eb-chat-launch" type="button" aria-controls="eb-chat-panel" aria-expanded="false">💬 Müşteri Sohbeti</button>
-<section id="eb-chat-panel" role="dialog" aria-label="EL BANKO site içi sohbet" aria-modal="false">
-  <header class="eb-chat-head"><div><strong>EL BANKO Destek</strong><small>Site içi sohbet</small></div><button id="eb-chat-close" type="button" aria-label="Sohbeti kapat">×</button></header>
-  <div id="eb-chat-log" aria-live="polite"><div class="eb-chat-msg">Merhaba! EL BANKO destek ekranına hoş geldiniz. Size nasıl yardımcı olabiliriz?<small>EL BANKO</small></div></div>
-  <form class="eb-chat-compose" id="eb-chat-form">
-    <input id="eb-chat-name" name="name" maxlength="60" autocomplete="name" placeholder="Adınız (isteğe bağlı)" aria-label="Adınız">
-    <textarea id="eb-chat-message" name="message" maxlength="1000" placeholder="Mesajınızı yazın..." aria-label="Mesajınız" required></textarea>
-    <button id="eb-chat-send" type="submit">Mesajı Göster</button>
-  </form>
-  <div class="eb-chat-notice">Bu sohbet arayüzü şu an önizleme modunda. Mesajlar destek ekibine iletilmez.</div>
-</section>
-<script>
-(function(){
- const launch=document.getElementById('eb-chat-launch');
- const panel=document.getElementById('eb-chat-panel');
- const close=document.getElementById('eb-chat-close');
- const form=document.getElementById('eb-chat-form');
- const log=document.getElementById('eb-chat-log');
- const message=document.getElementById('eb-chat-message');
- const name=document.getElementById('eb-chat-name');
- if(!launch||!panel||!form||!log)return;
- function toggle(open){panel.classList.toggle('eb-open',open);launch.setAttribute('aria-expanded',String(open));if(open)message.focus();}
- launch.addEventListener('click',()=>toggle(!panel.classList.contains('eb-open')));
- close.addEventListener('click',()=>toggle(false));
- form.addEventListener('submit',function(event){
-   event.preventDefault();
-   const value=message.value.trim();
-   if(!value)return;
-   const bubble=document.createElement('div');bubble.className='eb-chat-msg eb-user';
-   bubble.appendChild(document.createTextNode((name.value.trim()?name.value.trim()+': ':'')+value));
-   const stamp=document.createElement('small');stamp.textContent='Bu cihazdaki önizleme';bubble.appendChild(stamp);
-   log.appendChild(bubble);message.value='';log.scrollTop=log.scrollHeight;
- });
-})();
-</script>
-
-
+<a id="eb-chat-launch" href="https://wa.me/905011585145?text=Merhaba%20EL%20BANKO%2C%20bilgi%20almak%20istiyorum." target="_blank" rel="noopener noreferrer" aria-label="EL BANKO WhatsApp destek hattına yaz">🟢 WhatsApp Destek</a>
 <script>
 (function(){
  const form=document.getElementById('eb-member-form');
@@ -821,6 +785,34 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
        ?'Üyelik sunucusuna ulaşılamadı. Sistem kurulumu tamamlanana kadar kayıt alınamıyor.'
        :error.message;
    }finally{submit.disabled=false;submit.textContent='Ücretsiz Üye Ol';}
+ });
+})();
+</script>
+
+
+<section class="eb-wallet-card" id="eb-site-share" style="margin:24px 0;text-align:center">
+  <h2 style="margin-top:0">EL BANKO'yu arkadaşlarınla paylaş</h2>
+  <p style="color:#b8b6bd">Günlük yarış programını ve site bağlantısını kolayca paylaşabilirsin.</p>
+  <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap">
+    <button type="button" class="eb-action" id="eb-share-site">🔗 Siteyi paylaş</button>
+    <button type="button" class="eb-action secondary" id="eb-copy-site">Bağlantıyı kopyala</button>
+  </div>
+  <div id="eb-site-share-message" class="eb-message" role="status" aria-live="polite">https://el-banko.onrender.com</div>
+</section>
+<script>
+(function(){
+ const url='https://el-banko.onrender.com';
+ const msg=document.getElementById('eb-site-share-message');
+ const share=document.getElementById('eb-share-site');
+ const copy=document.getElementById('eb-copy-site');
+ if(share)share.addEventListener('click',async()=>{
+   const data={title:'EL BANKO',text:'EL BANKO — günlük yarış programı ve yarış bağlantıları',url};
+   try{if(navigator.share){await navigator.share(data);msg.textContent='Paylaşım menüsü açıldı.'}else{await navigator.clipboard.writeText(url);msg.textContent='Site bağlantısı kopyalandı.'}}
+   catch(e){if(e.name!=='AbortError')msg.textContent='Paylaşmak için site bağlantısını kullan: '+url}
+ });
+ if(copy)copy.addEventListener('click',async()=>{
+   try{await navigator.clipboard.writeText(url);msg.textContent='Site bağlantısı kopyalandı.'}
+   catch{msg.textContent='Bağlantı: '+url}
  });
 })();
 </script>
