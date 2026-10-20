@@ -520,24 +520,33 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   </div>
   <div class="eb-wallet-card" id="eb-iban-payment" style="margin-top:12px">
     <h3>🏦 IBAN ile Havale / EFT</h3>
-    <p>Ödeme yöntemi: banka havalesi veya EFT. Para gönderilmeden önce yönetici tarafından doğrulanmış hesap bilgilerini kontrol edin.</p>
-    <div class="eb-message">
-      <strong>Hesap sahibi:</strong> Nazar SAZCI
-      <br><strong>Banka:</strong> QNB
-      <br><strong>IBAN:</strong> Henüz girilmedi
-      <br><strong>Önemli:</strong> IBAN numarası eklenene kadar para göndermeyin.
-    </div>
-    <label for="eb-iban-package">Ödemek istediğiniz paket
+    <p>Kontör paketi siparişi oluşturun, banka transferini kendiniz yapın ve yöneticiye bildirin. Yönetici gerçek banka hareketini doğrulamadan kontör eklenmez.</p>
+    <div class="eb-message" id="eb-iban-details">Banka bilgileri yükleniyor. IBAN ve paket fiyatları yönetici tarafından eklenmeden para göndermeyin.</div>
+    <label for="eb-iban-package">Kontör paketi
       <select id="eb-iban-package">
-        <option value="Başlangıç · 200 jeton">Başlangıç · 200 jeton</option>
-        <option value="Standart · 500 jeton">Standart · 500 jeton</option>
-        <option value="Premium · 1.000 jeton">Premium · 1.000 jeton</option>
-        <option value="Pro · 2.500 jeton">Pro · 2.500 jeton</option>
-        <option value="Ultimate · 5.000 jeton">Ultimate · 5.000 jeton</option>
+        <option value="200">Başlangıç · 200 kontör</option>
+        <option value="500">Standart · 500 kontör</option>
+        <option value="1000">Premium · 1.000 kontör</option>
+        <option value="2500">Pro · 2.500 kontör</option>
+        <option value="5000">Ultimate · 5.000 kontör</option>
       </select>
     </label>
-    <div class="eb-message" id="eb-iban-order-message" role="status" aria-live="polite">IBAN bilgileri eklenip yönetici onay akışı bağlanana kadar para göndermeyin. Bu bölüm henüz ödeme talebini yöneticiye iletmez.</div>
-    <button type="button" class="eb-action secondary" id="eb-iban-order-button">Ödeme talebi adımlarını göster</button>
+    <button type="button" class="eb-action" id="eb-iban-order-button">Sipariş oluştur ve ödeme bilgilerini göster</button>
+    <div id="eb-iban-order-result" hidden>
+      <div class="eb-message" id="eb-iban-order-message" role="status" aria-live="polite"></div>
+      <label for="eb-bank-reference">Banka işlem / dekont referansı (isteğe bağlı)<input id="eb-bank-reference" maxlength="160" placeholder="Banka işlem numarası"></label>
+      <label for="eb-payment-note">Ödeme açıklaması (isteğe bağlı)<textarea id="eb-payment-note" maxlength="500" placeholder="Ödeme yaptığınız tarih ve kısa not"></textarea></label>
+      <button type="button" class="eb-action secondary" id="eb-report-payment-button">Havale yaptım · Yöneticiye bildir</button>
+    </div>
+    <div class="eb-message" id="eb-member-orders" role="status" aria-live="polite">Sipariş geçmişini görmek için üye hesabınıza giriş yapın.</div>
+  </div>
+  <div class="eb-wallet-card" id="eb-admin-payment-panel" style="margin-top:12px">
+    <h3>🔐 Yönetici · IBAN ödeme onayları</h3>
+    <p>Bu alan yalnızca Render ortamına kaydedilmiş yönetici anahtarıyla çalışır. Anahtarı üyelerle paylaşmayın.</p>
+    <label for="eb-admin-key">Yönetici anahtarı<input id="eb-admin-key" type="password" autocomplete="off" placeholder="Render'daki ELBANKO_ADMIN_KEY"></label>
+    <button type="button" class="eb-action secondary" id="eb-admin-load-orders">Ödeme bildirimlerini getir</button>
+    <div id="eb-admin-orders" class="eb-coupon-list" aria-live="polite"></div>
+    <div id="eb-admin-message" class="eb-message" role="status" aria-live="polite">Onay yalnızca banka hesabına gelen gerçek ödeme kontrol edildikten sonra verilmelidir.</div>
   </div>
   <div class="eb-wallet-card" style="margin-top:12px">
     <h3>💳 Ödeme Yap</h3>
@@ -564,6 +573,48 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
  function renderCoupons(){const items=readCoupons();couponList.replaceChildren();if(!items.length)return;items.slice().reverse().slice(0,5).forEach(item=>{const card=document.createElement('div');card.className='eb-coupon';const title=document.createElement('strong');title.textContent=item.title;const detail=document.createElement('small');detail.textContent='Kod: '+item.code+' · '+item.details;card.append(title,detail);couponList.append(card)})}
  writeBalance(readBalance());renderCoupons();
  const API='https://el-banko-race-api.onrender.com';
+ let currentIbanOrderId=null;
+ let paymentInfo=null;
+ async function loadPaymentInfo(){
+   const el=document.getElementById('eb-iban-details');
+   try{paymentInfo=await api('/api/payments/info');const lines=[];
+     if(paymentInfo.accountHolder)lines.push('Hesap sahibi: '+paymentInfo.accountHolder);
+     if(paymentInfo.bank)lines.push('Banka: '+paymentInfo.bank);
+     if(paymentInfo.iban)lines.push('IBAN: '+paymentInfo.iban);
+     lines.push('Paket fiyatları: '+([200,500,1000,2500,5000].map(n=>n.toLocaleString('tr-TR')+' kontör '+(paymentInfo.prices[n]?(paymentInfo.prices[n]/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'}):'fiyat belirlenmedi')).join(' · ')));
+     if(!paymentInfo.ready)lines.push('Sipariş açılması için yönetici IBAN, hesap sahibi ve beş paketin fiyatını Render ortam değişkenlerine eklemeli.');
+     el.textContent=lines.join(' | ');
+   }catch(e){el.textContent='Banka bilgileri şu anda alınamadı: '+e.message}
+ }
+ async function loadMemberOrders(){
+   const el=document.getElementById('eb-member-orders');if(!getToken()){el.textContent='Sipariş geçmişini görmek için üye girişi yapın.';return}
+   try{const data=await api('/api/payments/orders');el.replaceChildren();if(!data.orders.length){el.textContent='Henüz kontör siparişi yok.';return}
+    data.orders.forEach(o=>{const row=document.createElement('div');row.className='eb-coupon';const title=document.createElement('strong');title.textContent='Sipariş #'+o.id+' · '+Number(o.package_tokens).toLocaleString('tr-TR')+' kontör';const detail=document.createElement('small');detail.textContent=(o.amount_kurus/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'})+' · Durum: '+o.status+' · '+new Date(o.created_at).toLocaleString('tr-TR');row.append(title,detail);el.append(row)})
+   }catch(e){el.textContent=e.message}
+ }
+ document.getElementById('eb-iban-order-button').addEventListener('click',async()=>{
+   if(!getToken()){document.getElementById('eb-iban-order-message').textContent='Sipariş oluşturmak için önce onaylı üye hesabınızla giriş yapın.';document.getElementById('eb-iban-order-result').hidden=false;return}
+   const pkg=Number(document.getElementById('eb-iban-package').value),btn=document.getElementById('eb-iban-order-button');btn.disabled=true;
+   try{const data=await api('/api/payments/orders',{method:'POST',body:JSON.stringify({packageTokens:pkg})});currentIbanOrderId=Number(data.order.id);document.getElementById('eb-iban-order-result').hidden=false;document.getElementById('eb-iban-order-message').textContent='Sipariş #'+currentIbanOrderId+' oluşturuldu. Tutar: '+(data.order.amount_kurus/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'})+'. Alıcı: '+data.payment.accountHolder+(data.payment.bank?' · '+data.payment.bank:'')+' · IBAN: '+data.payment.iban+'. Açıklamaya EL BANKO sipariş #'+currentIbanOrderId+' yazın. Havale/EFT’yi bankanızdan kendiniz yapın; kontör henüz yüklenmedi.';await loadMemberOrders()}
+   catch(e){document.getElementById('eb-iban-order-result').hidden=false;document.getElementById('eb-iban-order-message').textContent=e.message}
+   finally{btn.disabled=false}
+ });
+ document.getElementById('eb-report-payment-button').addEventListener('click',async()=>{
+   if(!currentIbanOrderId){document.getElementById('eb-iban-order-message').textContent='Önce sipariş oluşturun.';return}
+   try{const data=await api('/api/payments/orders/notify',{method:'POST',body:JSON.stringify({orderId:currentIbanOrderId,bankReference:document.getElementById('eb-bank-reference').value.trim(),note:document.getElementById('eb-payment-note').value.trim()})});document.getElementById('eb-iban-order-message').textContent=data.message;await loadMemberOrders()}
+   catch(e){document.getElementById('eb-iban-order-message').textContent=e.message}
+ });
+ document.getElementById('eb-admin-load-orders').addEventListener('click',async()=>{
+   const key=document.getElementById('eb-admin-key').value;
+   const out=document.getElementById('eb-admin-orders'),msg=document.getElementById('eb-admin-message');out.replaceChildren();msg.textContent='Bildirimler yükleniyor…';
+   try{const data=await api('/api/admin/payment-orders',{headers:{'X-Admin-Key':key}});if(!data.orders.length){msg.textContent='Ödeme bildirimi yok.';return}
+    data.orders.forEach(o=>{const row=document.createElement('div');row.className='eb-coupon';const title=document.createElement('strong');title.textContent='Sipariş #'+o.id+' · '+o.full_name+' ('+o.username+')';const detail=document.createElement('small');detail.textContent=Number(o.package_tokens).toLocaleString('tr-TR')+' kontör · '+(o.amount_kurus/100).toLocaleString('tr-TR',{style:'currency',currency:'TRY'})+' · Durum: '+o.status+' · '+(o.payment_note||'Not yok')+' · Referans: '+(o.provider_reference||'yok');row.append(title,detail);
+      if(o.status==='reported'){const btn=document.createElement('button');btn.type='button';btn.className='eb-action';btn.textContent='Banka hareketini kontrol ettim · Onayla ve kontör yükle';btn.addEventListener('click',async()=>{if(!confirm('Banka hesabında bu siparişin tutarını gerçekten gördünüz mü? Onay sonrası '+o.package_tokens+' kontör yüklenecek.'))return;btn.disabled=true;try{const result=await api('/api/admin/payment-orders/approve',{method:'POST',headers:{'X-Admin-Key':key},body:JSON.stringify({orderId:o.id})});msg.textContent='Sipariş #'+o.id+' onaylandı. '+result.tokensAdded+' kontör yüklendi.';await document.getElementById('eb-admin-load-orders').click()}catch(e){msg.textContent=e.message;btn.disabled=false}});row.append(btn)}
+      out.append(row)
+    });msg.textContent='Siparişler listelendi. Yalnızca bankada gerçekten görülen ödemeleri onaylayın.'
+   }catch(e){msg.textContent=e.message}
+ });
+
  const accountMessage=document.getElementById('eb-account-message');
  const loginForm=document.getElementById('eb-login-form');
  const accountControls=document.getElementById('eb-account-controls');
@@ -592,6 +643,8 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
  document.getElementById('eb-account-refresh').addEventListener('click',refreshAccount);
  document.getElementById('eb-account-logout').addEventListener('click',async()=>{try{await api('/api/members/logout',{method:'POST',body:'{}'})}catch{}setToken('');accountControls.hidden=true;accountMessage.textContent='Güvenli çıkış yapıldı.'});
  if(getToken())refreshAccount();
+ loadPaymentInfo();
+ loadMemberOrders();
  let selectedPackage=null;
  const selectedPackageEl=document.getElementById('eb-selected-package');
  const buyPackageButton=document.getElementById('eb-buy-package');
