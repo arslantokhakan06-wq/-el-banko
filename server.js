@@ -8,7 +8,26 @@ let cache = { until: 0, data: null };
 let refreshPromise = null;
 const db = process.env.DATABASE_URL ? new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false}}) : null;
 let dbReady = false;
-async function initMembers(){if(!db)return;await db.query("CREATE TABLE IF NOT EXISTS members (id BIGSERIAL PRIMARY KEY, full_name VARCHAR(100) NOT NULL, username VARCHAR(30) UNIQUE NOT NULL, email VARCHAR(254) UNIQUE NOT NULL, phone VARCHAR(25), password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), status VARCHAR(20) NOT NULL DEFAULT 'pending')");dbReady=true;console.log("EL BANKO member table ready");}
+async function initMembers(){
+ if(!db)return;
+ await db.query("CREATE TABLE IF NOT EXISTS members (id BIGSERIAL PRIMARY KEY, full_name VARCHAR(100) NOT NULL, username VARCHAR(30) UNIQUE NOT NULL, email VARCHAR(254) UNIQUE NOT NULL, phone VARCHAR(25), password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), status VARCHAR(20) NOT NULL DEFAULT 'pending')");
+ await db.query("CREATE TABLE IF NOT EXISTS member_sessions (token_hash CHAR(64) PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+ await db.query("CREATE TABLE IF NOT EXISTS member_wallets (member_id BIGINT PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE, balance BIGINT NOT NULL DEFAULT 0 CHECK(balance >= 0), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+ await db.query("CREATE TABLE IF NOT EXISTS wallet_transactions (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, amount BIGINT NOT NULL, balance_after BIGINT NOT NULL, kind VARCHAR(30) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'pending', reference VARCHAR(120), description VARCHAR(250) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(kind, reference))");
+ await db.query("CREATE TABLE IF NOT EXISTS payment_orders (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, provider VARCHAR(20) NOT NULL, package_tokens BIGINT NOT NULL CHECK(package_tokens IN (200,500,1000,2500,5000)), amount_kurus BIGINT NOT NULL CHECK(amount_kurus > 0), status VARCHAR(20) NOT NULL DEFAULT 'pending', provider_reference VARCHAR(160), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), paid_at TIMESTAMPTZ)");
+ await db.query("CREATE TABLE IF NOT EXISTS coupon_drafts (id BIGSERIAL PRIMARY KEY, member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE, title VARCHAR(120) NOT NULL, content TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+ await db.query("INSERT INTO member_wallets(member_id,balance) SELECT id,0 FROM members ON CONFLICT(member_id) DO NOTHING");
+ await db.query("DELETE FROM member_sessions WHERE expires_at < NOW()");
+ dbReady=true;console.log("EL BANKO member, wallet, transaction and coupon tables ready");
+}
+function tokenHash(token){return crypto.createHash("sha256").update(String(token||"")).digest("hex");}
+async function authenticatedMember(req){
+ if(!db||!dbReady)return null;
+ const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();
+ if(!/^[a-f0-9]{64}$/i.test(token))return null;
+ const r=await db.query("SELECT m.id,m.full_name,m.username,m.email,m.phone,m.status FROM member_sessions s JOIN members m ON m.id=s.member_id WHERE s.token_hash=$1 AND s.expires_at>NOW()",[tokenHash(token)]);
+ return r.rows[0]||null;
+}
 function jsonBody(req){return new Promise((resolve,reject)=>{let data="";req.on("data",c=>{data+=c;if(data.length>10000)reject(new Error("Form çok büyük"));});req.on("end",()=>{try{resolve(JSON.parse(data||"{}"));}catch{reject(new Error("Form bilgileri okunamadı"));}});req.on("error",reject);});}
 function hashPassword(password){return new Promise((resolve,reject)=>{const salt=crypto.randomBytes(16);crypto.scrypt(password,salt,64,(err,key)=>err?reject(err):resolve(salt.toString("hex")+":"+key.toString("hex")));});}
 
@@ -202,6 +221,58 @@ const server=http.createServer(async(req,res)=>{
     if(b.termsAccepted!==true)return send(res,400,{error:"Üyelik koşullarını kabul etmelisiniz."});
     try{const hash=await hashPassword(password);const r=await db.query("INSERT INTO members(full_name,username,email,phone,password_hash) VALUES($1,$2,$3,$4,$5) RETURNING id,full_name,username,email,status,created_at",[name,username,email,phone||null,hash]);return send(res,201,{ok:true,message:"Üyelik başvurunuz kaydedildi. Yönetici onayından sonra hesabınız etkinleştirilecektir.",member:r.rows[0]});}
     catch(e){if(e.code==="23505")return send(res,409,{error:"Bu kullanıcı adı veya e-posta zaten kayıtlı."});console.error("Member registration failed",e.message);return send(res,500,{error:"Kayıt tamamlanamadı. Lütfen daha sonra deneyin."});}
+  }
+  if(url.pathname==="/api/members/login" && req.method==="POST"){
+    if(!db||!dbReady)return send(res,503,{error:"Üyelik veri tabanı henüz bağlanmadı."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    const identity=String(b.identity||"").trim().toLowerCase(),password=String(b.password||"");
+    if(!identity||!password)return send(res,400,{error:"Kullanıcı adı/e-posta ve şifre girin."});
+    try{
+      const r=await db.query("SELECT id,full_name,username,email,phone,password_hash,status FROM members WHERE lower(username)=lower($1) OR lower(email)=lower($1) LIMIT 1",[identity]);
+      const m=r.rows[0];if(!m)return send(res,401,{error:"Giriş bilgileri hatalı."});
+      const [saltHex,keyHex]=m.password_hash.split(":");
+      const candidate=await new Promise((resolve,reject)=>crypto.scrypt(password,Buffer.from(saltHex,"hex"),64,(err,key)=>err?reject(err):resolve(key.toString("hex"))));
+      if(!safeEqual(candidate,keyHex))return send(res,401,{error:"Giriş bilgileri hatalı."});
+      if(m.status!=="approved")return send(res,403,{error:m.status==="suspended"?"Hesabınız askıya alınmış.":"Hesabınız yönetici onayını bekliyor."});
+      const token=crypto.randomBytes(32).toString("hex");
+      await db.query("INSERT INTO member_sessions(token_hash,member_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '7 days')",[tokenHash(token),m.id]);
+      await db.query("INSERT INTO member_wallets(member_id,balance) VALUES($1,0) ON CONFLICT(member_id) DO NOTHING",[m.id]);
+      return send(res,200,{ok:true,token,member:{id:m.id,name:m.full_name,username:m.username,email:m.email},expiresIn:604800});
+    }catch(e){console.error("Member login failed",e.message);return send(res,500,{error:"Giriş yapılamadı. Lütfen tekrar deneyin."});}
+  }
+  if(url.pathname==="/api/members/logout" && req.method==="POST"){
+    if(db&&dbReady){const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();if(token)await db.query("DELETE FROM member_sessions WHERE token_hash=$1",[tokenHash(token)]).catch(()=>{});}
+    return send(res,200,{ok:true});
+  }
+  if(url.pathname==="/api/account" && req.method==="GET"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Devam etmek için onaylı üye hesabınızla giriş yapın."});
+    try{const w=await db.query("SELECT balance FROM member_wallets WHERE member_id=$1",[m.id]);return send(res,200,{member:{id:m.id,name:m.full_name,username:m.username,email:m.email,phone:m.phone},wallet:{balance:Number(w.rows[0]?.balance||0)},payment:{enabled:false,reason:"PayTR/iyzico tercihi, işyeri başvurusu ve güvenli anahtarlar henüz yapılandırılmadı."}});}
+    catch(e){console.error("Account read failed",e.message);return send(res,500,{error:"Hesap bilgileri alınamadı."});}
+  }
+  if(url.pathname==="/api/account/transactions" && req.method==="GET"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Giriş yapmanız gerekiyor."});
+    try{const r=await db.query("SELECT id,amount,balance_after,kind,status,reference,description,created_at FROM wallet_transactions WHERE member_id=$1 ORDER BY created_at DESC LIMIT 100",[m.id]);return send(res,200,{transactions:r.rows});}
+    catch(e){console.error("Wallet history failed",e.message);return send(res,500,{error:"İşlem geçmişi alınamadı."});}
+  }
+  if(url.pathname==="/api/coupon-drafts" && req.method==="GET"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Kupon taslaklarını kaydetmek için giriş yapın."});
+    try{const r=await db.query("SELECT id,title,content,created_at,updated_at FROM coupon_drafts WHERE member_id=$1 ORDER BY updated_at DESC LIMIT 50",[m.id]);return send(res,200,{drafts:r.rows});}
+    catch(e){console.error("Coupon drafts read failed",e.message);return send(res,500,{error:"Kupon taslakları alınamadı."});}
+  }
+  if(url.pathname==="/api/coupon-drafts" && req.method==="POST"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Kupon taslağını kaydetmek için giriş yapın."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    const title=String(b.title||"Kupon taslağı").trim().slice(0,120),content=String(b.content||"").trim();
+    if(!content||content.length>12000)return send(res,400,{error:"Kupon taslağı boş olamaz ve 12.000 karakteri aşamaz."});
+    try{const r=await db.query("INSERT INTO coupon_drafts(member_id,title,content) VALUES($1,$2,$3) RETURNING id,title,content,created_at,updated_at",[m.id,title||"Kupon taslağı",content]);return send(res,201,{ok:true,draft:r.rows[0],message:"Kupon taslağı hesabınıza kaydedildi. Gerçek bahis gönderilmedi."});}
+    catch(e){console.error("Coupon draft save failed",e.message);return send(res,500,{error:"Kupon taslağı kaydedilemedi."});}
+  }
+  if(url.pathname==="/api/payments/create" && req.method==="POST"){
+    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme başlatmak için onaylı üye hesabıyla giriş yapın."});
+    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
+    const pkg=Number(b.packageTokens);
+    if(![200,500,1000,2500,5000].includes(pkg))return send(res,400,{error:"Kontör paketi geçersiz."});
+    return send(res,503,{enabled:false,error:"Gerçek ödeme henüz etkin değil. PayTR veya iyzico tercihi, onaylı üye işyeri hesabı, paket fiyatları ve sunucuya güvenli şekilde eklenmiş API anahtarları gerekli. Ödeme alınmadı; kontör eklenmedi."});
   }
   if(url.pathname==="/api/races" && req.method==="GET"){
     if(cache.data && cache.until>Date.now()) return send(res,200,{...cache.data,cached:true});
