@@ -283,66 +283,6 @@ const server=http.createServer(async(req,res)=>{
     try{const r=await db.query("INSERT INTO coupon_drafts(member_id,title,content) VALUES($1,$2,$3) RETURNING id,title,content,created_at,updated_at",[m.id,title||"Kupon taslağı",content]);return send(res,201,{ok:true,draft:r.rows[0],message:"Kupon taslağı hesabınıza kaydedildi. Gerçek bahis gönderilmedi."});}
     catch(e){console.error("Coupon draft save failed",e.message);return send(res,500,{error:"Kupon taslağı kaydedilemedi."});}
   }
-  if(url.pathname==="/api/payments/info" && req.method==="GET"){
-    const prices={};
-    for(const n of [200,500,1000,2500,5000]){const v=Number(process.env["TOKEN_PRICE_"+n+"_KURUS"]||0);prices[n]=Number.isSafeInteger(v)&&v>0?v:null;}
-    return send(res,200,{iban:process.env.ELBANKO_PAYMENT_IBAN||"",bank:process.env.ELBANKO_PAYMENT_BANK||"",accountHolder:process.env.ELBANKO_PAYMENT_HOLDER||"",prices,ready:Boolean(process.env.ELBANKO_PAYMENT_IBAN&&process.env.ELBANKO_PAYMENT_HOLDER&&[200,500,1000,2500,5000].every(n=>prices[n]))});
-  }
-  if(url.pathname==="/api/payments/orders" && req.method==="GET"){
-    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme taleplerini görmek için giriş yapın."});
-    try{const r=await db.query("SELECT id,package_tokens,amount_kurus,status,provider_reference,payment_note,created_at,submitted_at,reviewed_at FROM payment_orders WHERE member_id=$1 ORDER BY created_at DESC LIMIT 50",[m.id]);return send(res,200,{orders:r.rows});}
-    catch(e){console.error("Payment orders read failed",e.message);return send(res,500,{error:"Ödeme talepleri alınamadı."});}
-  }
-  if(url.pathname==="/api/payments/orders" && req.method==="POST"){
-    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Kontör siparişi için onaylı üye hesabınızla giriş yapın."});
-    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
-    const pkg=Number(b.packageTokens);
-    if(![200,500,1000,2500,5000].includes(pkg))return send(res,400,{error:"Kontör paketi geçersiz."});
-    const amount=Number(process.env["TOKEN_PRICE_"+pkg+"_KURUS"]||0);
-    if(!process.env.ELBANKO_PAYMENT_IBAN||!process.env.ELBANKO_PAYMENT_HOLDER||!Number.isSafeInteger(amount)||amount<=0)return send(res,503,{error:"Havale ile sipariş henüz açılamıyor. Yönetici Render ortamına alıcı IBAN'ını, hesap sahibini ve beş paketin TL fiyatlarını eklemeli. Ödeme alınmadı; kontör eklenmedi."});
-    try{const r=await db.query("INSERT INTO payment_orders(member_id,provider,package_tokens,amount_kurus,status) VALUES($1,'iban',$2,$3,'pending') RETURNING id,package_tokens,amount_kurus,status,created_at",[m.id,pkg,amount]);return send(res,201,{ok:true,order:r.rows[0],payment:{iban:process.env.ELBANKO_PAYMENT_IBAN,bank:process.env.ELBANKO_PAYMENT_BANK||"",accountHolder:process.env.ELBANKO_PAYMENT_HOLDER}});}
-    catch(e){console.error("Payment order create failed",e.message);return send(res,500,{error:"Kontör siparişi oluşturulamadı."});}
-  }
-  if(url.pathname==="/api/payments/orders/notify" && req.method==="POST"){
-    const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme bildirimi için giriş yapın."});
-    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
-    const id=Number(b.orderId),note=String(b.note||"").trim().slice(0,500),reference=String(b.bankReference||"").trim().slice(0,160);
-    const senderName=String(b.senderName||"").trim().slice(0,120),senderBank=String(b.senderBank||"").trim().slice(0,120),senderIban=String(b.senderIban||"").replace(/\\s+/g,"").toUpperCase(),reportedAmount=Number(b.reportedAmount);
-    if(!Number.isSafeInteger(id)||id<=0)return send(res,400,{error:"Sipariş numarası geçersiz."});
-    if(senderName.length<2||senderBank.length<2||!/^TR[0-9A-Z]{24}$/.test(senderIban)||!Number.isFinite(reportedAmount)||reportedAmount<=0||reportedAmount>100000000)return send(res,400,{error:"Gönderen adı, banka adı, geçerli TR IBAN ve gönderilen tutarı (TL) doğru girin."});
-    try{const r=await db.query("UPDATE payment_orders SET status='reported',payment_note=$1,provider_reference=$2,submitted_at=NOW(),sender_name=$5,sender_bank=$6,sender_iban=$7,reported_amount_kurus=$8 WHERE id=$3 AND member_id=$4 AND status='pending' RETURNING id,status",[note,reference,id,m.id,senderName,senderBank,senderIban,Math.round(reportedAmount*100)]);if(!r.rowCount)return send(res,409,{error:"Sipariş bulunamadı veya daha önce bildirilmiş/onaylanmış."});return send(res,200,{ok:true,order:r.rows[0],message:"Ödeme bildirimi alındı. Kontör, yönetici gerçek banka hareketini doğrulayıp onaylayana kadar yüklenmez."});}
-    catch(e){console.error("Payment notification failed",e.message);return send(res,500,{error:"Ödeme bildirimi kaydedilemedi."});}
-  }
-  if(url.pathname==="/api/admin/payment-orders" && req.method==="GET"){
-    const key=String(req.headers["x-admin-key"]||"");
-    if(!process.env.ELBANKO_ADMIN_KEY||!safeEqual(key,process.env.ELBANKO_ADMIN_KEY))return send(res,403,{error:"Yönetici yetkisi doğrulanamadı."});
-    try{const r=await db.query("SELECT o.id,o.member_id,m.full_name,m.username,m.email,o.package_tokens,o.amount_kurus,o.status,o.provider_reference,o.payment_note,o.sender_name,o.sender_bank,o.sender_iban,o.reported_amount_kurus,o.created_at,o.submitted_at FROM payment_orders o JOIN members m ON m.id=o.member_id ORDER BY CASE WHEN o.status='reported' THEN 0 ELSE 1 END,o.created_at DESC LIMIT 100");return send(res,200,{orders:r.rows});}
-    catch(e){console.error("Admin payment orders failed",e.message);return send(res,500,{error:"Yönetici sipariş listesi alınamadı."});}
-  }
-  if(url.pathname==="/api/admin/payment-orders/approve" && req.method==="POST"){
-    const key=String(req.headers["x-admin-key"]||"");
-    if(!process.env.ELBANKO_ADMIN_KEY||!safeEqual(key,process.env.ELBANKO_ADMIN_KEY))return send(res,403,{error:"Yönetici yetkisi doğrulanamadı."});
-    let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
-    const id=Number(b.orderId);
-    if(!Number.isSafeInteger(id)||id<=0)return send(res,400,{error:"Sipariş numarası geçersiz."});
-    const client=await db.connect();
-    try{
-      await client.query("BEGIN");
-      const r=await client.query("SELECT * FROM payment_orders WHERE id=$1 FOR UPDATE",[id]);
-      const o=r.rows[0];if(!o){await client.query("ROLLBACK");return send(res,404,{error:"Sipariş bulunamadı."});}
-      if(o.status!=="reported"){await client.query("ROLLBACK");return send(res,409,{error:"Yalnızca üyenin bildirdiği, henüz onaylanmamış sipariş onaylanabilir."});}
-      const w=await client.query("INSERT INTO member_wallets(member_id,balance) VALUES($1,0) ON CONFLICT(member_id) DO UPDATE SET member_id=EXCLUDED.member_id RETURNING balance",[o.member_id]);
-      const before=Number(w.rows[0].balance);
-      const upd=await client.query("UPDATE member_wallets SET balance=balance+$1,updated_at=NOW() WHERE member_id=$2 RETURNING balance",[o.package_tokens,o.member_id]);
-      const after=Number(upd.rows[0].balance);
-      await client.query("INSERT INTO wallet_transactions(member_id,amount,balance_after,kind,status,reference,description) VALUES($1,$2,$3,'iban_topup','approved',$4,$5)",[o.member_id,o.package_tokens,after,"iban-order-"+o.id,"IBAN ödeme onayı · Sipariş #"+o.id]);
-      await client.query("UPDATE payment_orders SET status='approved',paid_at=NOW(),reviewed_at=NOW(),reviewed_by='admin' WHERE id=$1",[id]);
-      await client.query("COMMIT");
-      return send(res,200,{ok:true,orderId:id,memberId:Number(o.member_id),tokensAdded:Number(o.package_tokens),balanceBefore:before,balanceAfter:after,message:"Onaylandı ve kontör bir kez yüklendi."});
-    }catch(e){await client.query("ROLLBACK").catch(()=>{});console.error("Admin payment approval failed",e.message);return send(res,500,{error:"Onay işlemi başarısız oldu; kontör yükleme tamamlanmadı."});}
-    finally{client.release();}
-  }
-
   if(url.pathname==="/api/bank-transfer/orders" && req.method==="POST"){
     const m=await authenticatedMember(req);if(!m)return send(res,401,{error:"Ödeme talebi için onaylı üye hesabınızla giriş yapın."});
     let b;try{b=await jsonBody(req);}catch(e){return send(res,400,{error:e.message});}
@@ -458,6 +398,7 @@ const server=http.createServer(async(req,res)=>{
       const order=await client.query("SELECT id,member_id,package_tokens,amount_kurus,status FROM payment_orders WHERE id=$1 FOR UPDATE",[id]);
       if(!order.rowCount){await client.query("ROLLBACK");return send(res,404,{error:"Sipariş bulunamadı."});}
       const o=order.rows[0];if(o.status!=="reported"){await client.query("ROLLBACK");return send(res,409,{error:"Bu sipariş ödeme bildirimi beklemiyor veya daha önce işlenmiş."});}
+      if(!o.reported_amount_kurus || Number(o.reported_amount_kurus)!==Number(o.amount_kurus)){await client.query("ROLLBACK");return send(res,409,{error:"Bildirilen tutar sipariş tutarıyla eşleşmiyor. Banka hareketi ve tutar kontrol edilmeden onay verilemez."});}
       await client.query("INSERT INTO member_wallets(member_id,balance) VALUES($1,0) ON CONFLICT(member_id) DO NOTHING",[o.member_id]);
       const updated=await client.query("UPDATE member_wallets SET balance=balance+$1,updated_at=NOW() WHERE member_id=$2 RETURNING balance",[Number(o.package_tokens),o.member_id]);
       const ref="bank-order-"+o.id;
