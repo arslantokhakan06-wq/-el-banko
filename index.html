@@ -239,13 +239,14 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
   function updateStarts(){
     const c=currentCourse();startSelect.replaceChildren();
     if(!c||!Array.isArray(c.races)||!c.races.length){startSelect.add(new Option('Koşu bilgisi bulunamadı',''));renderLegs();return;}
-    c.races.forEach(r=>startSelect.add(new Option(r.number+'. koşu · '+(r.time||'Saat yok')+(r.title?' · '+r.title:''),String(r.number))));
+    c.races.filter(r=>Array.from({length:6},(_,n)=>c.races.some(x=>Number(x.number)===Number(r.number)+n)).every(Boolean)).forEach(r=>startSelect.add(new Option(r.number+'. koşu · '+(r.time||'Saat yok')+(r.title?' · '+r.title:''),String(r.number))));
+    if(!startSelect.options.length)startSelect.add(new Option('6 ardışık koşu bulunamadı',''));
     renderLegs();
   }
   function renderLegs(){
     const c=currentCourse();const races=c&&Array.isArray(c.races)?c.races:[];
     const start=Number(startSelect.value);const selected=Array.from({length:6},(_,n)=>races.find(x=>Number(x.number)===start+n)||null);
-    if(!start||!selected.some(Boolean)){legsEl.className='race-empty';legsEl.textContent='Hipodrom ve altılı başlangıç koşusunu seçin; ardından her ayak için atları işaretleyin.';horseSuggestions.className='race-empty';horseSuggestions.textContent='Canlı at seçenekleri program verisi geldikten sonra burada gösterilir.';return;}
+    if(!start||selected.some(r=>!r)){legsEl.className='race-empty';legsEl.textContent='Altılı kupon taslağı için aynı hipodromda art arda 6 koşu bulunmalı. Uygun başlangıç koşusunu seçin.';horseSuggestions.className='race-empty';horseSuggestions.textContent='Canlı at seçenekleri program verisi geldikten sonra burada gösterilir.';return;}
     legsEl.className='race-results';
     legsEl.innerHTML='<div class="race-meta">Her ayakta bir veya daha fazla at seçin. Altı ayak tamamlanınca kupon taslağı oluşturabilirsiniz.</div><table><thead><tr><th>Ayak</th><th>Koşu</th><th>Saat</th><th>At seçimi</th></tr></thead><tbody>'+selected.map((r,i)=>{
       const raceHorses=r&&Array.isArray(r.horses)?r.horses:[];
