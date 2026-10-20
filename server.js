@@ -23,7 +23,7 @@ async function initMembers(){
 function tokenHash(token){return crypto.createHash("sha256").update(String(token||"")).digest("hex");}
 async function authenticatedMember(req){
  if(!db||!dbReady)return null;
- const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();
+ const token=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"").trim();
  if(!/^[a-f0-9]{64}$/i.test(token))return null;
  const r=await db.query("SELECT m.id,m.full_name,m.username,m.email,m.phone,m.status FROM member_sessions s JOIN members m ON m.id=s.member_id WHERE s.token_hash=$1 AND s.expires_at>NOW()",[tokenHash(token)]);
  return r.rows[0]||null;
@@ -241,7 +241,7 @@ const server=http.createServer(async(req,res)=>{
     }catch(e){console.error("Member login failed",e.message);return send(res,500,{error:"Giriş yapılamadı. Lütfen tekrar deneyin."});}
   }
   if(url.pathname==="/api/members/logout" && req.method==="POST"){
-    if(db&&dbReady){const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();if(token)await db.query("DELETE FROM member_sessions WHERE token_hash=$1",[tokenHash(token)]).catch(()=>{});}
+    if(db&&dbReady){const token=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"").trim();if(token)await db.query("DELETE FROM member_sessions WHERE token_hash=$1",[tokenHash(token)]).catch(()=>{});}
     return send(res,200,{ok:true});
   }
   if(url.pathname==="/api/account" && req.method==="GET"){
