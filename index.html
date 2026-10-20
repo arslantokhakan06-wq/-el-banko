@@ -265,7 +265,7 @@ footer{padding:30px 0 8px;text-align:center;color:#666973;font-size:11px;letter-
       courseSelect.replaceChildren();
       courses.forEach((c,i)=>courseSelect.add(new Option(c.course||('Hipodrom '+(i+1)),String(i))));
       if(!courses.length)throw new Error('Programda hipodrom bulunamadı.');
-      updateStarts();message.textContent='Kaynak: '+(data.source||'TJK günlük programı')+'. Son güncelleme: '+(data.fetchedAt?new Date(data.fetchedAt).toLocaleString('tr-TR'):'belirtilmedi')+'.';
+      updateStarts();message.textContent='EL BANKO programı güncellendi. Son güncelleme: '+(data.fetchedAt?new Date(data.fetchedAt).toLocaleString('tr-TR'):'belirtilmedi')+'.';
     }catch(e){
       courseSelect.replaceChildren(new Option('Program şu an alınamıyor',''));
       startSelect.replaceChildren(new Option('Program şu an alınamıyor',''));
